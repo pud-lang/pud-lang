@@ -17,8 +17,8 @@ struct PartialType;
 struct StaticType;
 struct UnionType;
 
-/// 定义了一个用于类型推断的复杂结构，采用了Hindley-Milner Algorithm
-/// W进行类型推断。
+/// 定义了一个用于类型推断的复杂结构，采用了Hindley-Milner
+/// Algorithm W进行类型推断。
 /// 这种类型系统的设计允许编译器自动推断程序中的类型，减少了对程序员的类型标
 /// 注要求，同时提高了代码的灵活性和表现力。
 struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
@@ -86,6 +86,19 @@ struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
 
   virtual auto realized_name() const -> std::string = 0;
 
+  // 避免使用dynamic_cast，没有llvm classof那种机制，一种简便的实现方式。
+  virtual auto get_func() -> std::shared_ptr<FuncType> { return nullptr; }
+  virtual auto get_partial() -> std::shared_ptr<PartialType> { return nullptr; }
+  virtual auto get_class() -> std::shared_ptr<ClassType> { return nullptr; }
+  virtual auto get_record() -> std::shared_ptr<RecordType> { return nullptr; }
+  virtual auto get_link() -> std::shared_ptr<LinkType> { return nullptr; }
+  virtual auto get_unbound() -> std::shared_ptr<LinkType> { return nullptr; }
+  virtual auto get_static() -> std::shared_ptr<StaticType> { return nullptr; }
+  virtual auto get_union() -> std::shared_ptr<UnionType> { return nullptr; }
+  virtual auto get_heterogenous_tuple() -> std::shared_ptr<RecordType> {
+    return nullptr;
+  }
+
   virtual auto is(const std::string& s) -> bool;
 
   auto is_static_type() -> char;
@@ -97,6 +110,6 @@ struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
 
 using TypePtr = std::shared_ptr<Type>;
 
-}  // namespace Pud::Types
+}  // namespace Pud::Type
 
 #endif  // PUD_TYPE_TYPE_H

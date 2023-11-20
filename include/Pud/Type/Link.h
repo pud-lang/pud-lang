@@ -11,6 +11,34 @@ namespace Pud::Type {
 struct LinkType : public Type {
   // 未绑定（Unbound）、泛型（Generic）或链接（Link）。
   enum Kind { Unbound, Generic, Link } kind;
+
+  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
+           char is_static = 0, std::shared_ptr<Trait> trait = nullptr,
+           TypePtr default_type = nullptr, std::string generic_name = "");
+
+  explicit LinkType(TypePtr type);
+
+  auto unify(Type* typ, Unification* undodo) -> int override;
+  auto generalize(int at_level) -> TypePtr override;
+  auto instantiate(int at_level, int* unbound_count,
+                   std::unordered_map<int, TypePtr>* cache) -> TypePtr override;
+
+  auto follow() -> TypePtr override;
+  auto get_unbounds() const -> std::vector<TypePtr> override;
+  auto can_realize() const -> bool override;
+  auto is_instantiated() const -> bool override;
+  auto debug_string(char mode) const -> std::string override;
+  auto realized_name() const -> std::string override;
+
+  auto get_link() -> std::shared_ptr<LinkType> override;
+  auto get_func() -> std::shared_ptr<FuncType> override;
+  auto get_partial() -> std::shared_ptr<PartialType> override;
+  auto get_class() -> std::shared_ptr<ClassType> override;
+  auto get_record() -> std::shared_ptr<RecordType> override;
+  auto get_static() -> std::shared_ptr<StaticType> override;
+  auto get_union() -> std::shared_ptr<UnionType> override;
+  auto get_unbound() -> std::shared_ptr<LinkType> override;
+
   // 未绑定或泛型类型的唯一标识符。
   int id;
   // 未绑定类型的类型检查级别。
@@ -26,40 +54,9 @@ struct LinkType : public Type {
   // 如果未绑定的类型未解决，将使用的类型。
   TypePtr default_type;
 
- public:
-  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
-           char is_static = 0, std::shared_ptr<Trait> trait = nullptr,
-           TypePtr default_type = nullptr, std::string generic_name = "");
-  /// Convenience constructor for linked types.
-  explicit LinkType(TypePtr type);
-
- public:
-  int unify(Type* typ, Unification* undodo) override;
-  TypePtr generalize(int atLevel) override;
-  TypePtr instantiate(int atLevel, int* unboundCount,
-                      std::unordered_map<int, TypePtr>* cache) override;
-
- public:
-  TypePtr follow() override;
-  std::vector<TypePtr> getUnbounds() const override;
-  bool canRealize() const override;
-  bool isInstantiated() const override;
-  std::string debugString(char mode) const override;
-  std::string realizedName() const override;
-
-  std::shared_ptr<LinkType> getLink() override;
-  std::shared_ptr<FuncType> getFunc() override;
-  std::shared_ptr<PartialType> getPartial() override;
-  std::shared_ptr<ClassType> getClass() override;
-  std::shared_ptr<RecordType> getRecord() override;
-  std::shared_ptr<StaticType> getStatic() override;
-  std::shared_ptr<UnionType> getUnion() override;
-  std::shared_ptr<LinkType> getUnbound() override;
-
  private:
-  /// Checks if a current (unbound) type occurs within a given type.
-  /// Needed to prevent a recursive unification (e.g. ?1 with list[?1]).
-  bool occurs(Type* typ, Type::Unification* undo);
+  /// 检查类型是否在给定类型内部出现，用于防止递归统一。例如list[?1]中的?1。
+  auto occurs(Type* typ, Type::Unification* undo) -> bool;
 };
 
 }  // namespace Pud::Type
