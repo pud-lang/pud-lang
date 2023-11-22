@@ -434,7 +434,7 @@ struct ThrowStmt : public Stmt {
   // 抛出的异常表达式。
   ExprPtr expr;
   // 如果语句在类型检查阶段被转换，则为True
-  //(避免多次设置ExcHeader)。
+  // 用于避免在多次类型检查或其他编译阶段中重复处理同一语句。
   bool transformed;
 
   explicit ThrowStmt(ExprPtr expr, bool transformed = false);
@@ -500,7 +500,7 @@ struct Attr {
 
   std::set<std::string> magics;
 
-  // Set of attributes
+  // 存储自定义属性集合。
   std::set<std::string> custom_attr;
 
   explicit Attr(
@@ -541,14 +541,20 @@ struct FunctionStmt : public Stmt {
   /// S-expression form.
   /// @li (T U (int 0))
   auto signature() const -> std::string;
+  // 检查函数是否有特定属性。
   auto has_attr(const std::string& attr) const -> bool;
-  void parseDecorators();
+  // 处理装饰器。
+  void parse_decorators();
 
+  // 获取特定类型的参数数量。
   auto get_star_args() const -> size_t;
   auto get_kw_star_args() const -> size_t;
 
+  // 返回指向当前函数声明的指针。
   auto get_function() -> FunctionStmt* override { return this; }
+  // 获取文档字符串。
   auto get_doc_str() -> std::string;
+  // 获取不能自动推断的泛型参数。
   auto get_non_inferrable_generics() -> std::unordered_set<std::string>;
 };
 
