@@ -28,6 +28,30 @@ struct CallableTrait : public Trait {
   std::vector<TypePtr> args;  // 存储参数类型和返回类型。
 };
 
+struct TypeTrait : public Trait {
+  TypePtr type;
+
+ public:
+  explicit TypeTrait(TypePtr type);
+  auto unify(Type* typ, Unification* undo) -> int override;
+  auto generalize(int at_level) -> TypePtr override;
+  auto instantiate(int at_level, int* unbound_count,
+                   std::unordered_map<int, TypePtr>* cache) -> TypePtr override;
+  auto debug_string(char mode) const -> std::string override;
+};
+
+struct VariableTupleTrait : public Trait {
+  TypePtr size;
+
+ public:
+  explicit VariableTupleTrait(TypePtr size);
+  auto unify(Type* typ, Unification* undo) -> int override;
+  auto generalize(int at_level) -> TypePtr override;
+  auto instantiate(int at_level, int* unbound_count,
+                   std::unordered_map<int, TypePtr>* cache) -> TypePtr override;
+  auto debug_string(char mode) const -> std::string override;
+};
+
 }  // namespace Pud::Type
 
 #endif  // PUD_TYPE_TRAITS_H
