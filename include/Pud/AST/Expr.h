@@ -49,39 +49,43 @@ struct StaticValue {
 struct Expr : public SourceObject {
   using BaseType = Expr;
 
+  // 表达式的类型。
   Pud::Type::TypePtr type;
+  // 这个表达式是否表示一个类型。
   bool is_type_expr;
+  // 如果表达式是静态的（在编译时可知的值），此字段存储其值。
   StaticValue static_value;
+  // 表示类型推断或某种处理是否完成。
   bool done;
+  // 用于存储表达式的各种标志或属性。
   int attributes;
+  // 指向原始表达式的指针，用于在表达式被转换或修改后保留原始形态。
   std::shared_ptr<Expr> orig_expr;
 
  public:
   Expr();
   Expr(const Expr& expr) = default;
 
-  /// Convert a node to an S-expression.
+  // S-expression输出。
   virtual auto to_string() const -> std::string = 0;
-  /// Validate a node. Throw ParseASTException if a node is not valid.
+  // 验证表达式的合法性。
   void validate() const;
-  /// Deep copy a node.
+  // 创建并返回表达式的深拷贝。
   virtual auto clone() const -> std::shared_ptr<Expr> = 0;
-  /// Accept an AST visitor.
+  // 访问者模式的访问，用于遍历或操作AST。
   virtual void accept(ASTVisitor& visitor) = 0;
 
-  /// Get a node type.
-  /// @return Type pointer or a nullptr if a type is not set.
+  // 获取表达式的类型。
   auto get_type() const -> Pud::Type::TypePtr;
-  /// Set a node type.
-  void setType(Pud::Type::TypePtr type);
-  /// @return true if a node describes a type expression.
+  // 设置表达式的类型。
+  void set_type(Pud::Type::TypePtr type);
+  // 检查表达式是否为类型表达式。
   auto is_type() const -> bool;
-  /// Marks a node as a type expression.
+  // 标记表达式为类型表达式。
   void mark_type();
-  /// True if a node is static expression.
+  // 检查表达式是否为静态表达式。
   auto is_static() const -> bool;
 
-  /// Allow pretty-printing to C++ streams.
   friend auto operator<<(std::ostream& out, const Expr& expr) -> std::ostream& {
     return out << expr.to_string();
   }
@@ -103,18 +107,19 @@ struct Expr : public SourceObject {
   virtual auto get_tuple() -> TupleExpr* { return nullptr; }
   virtual auto get_unary() -> UnaryExpr* { return nullptr; }
 
-  /// Attribute helpers
+  // 获取或设置表达式的属性。
   auto has_attr(int attr) const -> bool;
   void set_attr(int attr);
 
+  // 检查或标记表达式处理是否完成。
   auto is_done() const -> bool { return done; }
   void set_done() { done = true; }
 
-  /// @return Type name for IdExprs or instantiations.
+  // 获取IdExpr或实例化表达式的类型名称。
   auto get_type_name() -> std::string;
 
  protected:
-  /// Add a type to S-expression string.
+  // 将类型信息添加到S表达式字符串中。
   auto wrap_type(const std::string& sexpr) const -> std::string;
 };
 

@@ -63,6 +63,7 @@ struct ClassType : public Type {
   auto realized_name() const -> std::string override;
   // 获取实现类型的名称，可以由子类重写。
   virtual auto realized_type_name() const -> std::string;
+
   auto get_class() -> std::shared_ptr<ClassType> override {
     return std::static_pointer_cast<ClassType>(shared_from_this());
   }
@@ -75,7 +76,7 @@ struct RecordType : public ClassType {
   // 元组中的元素类型列表。
   std::vector<TypePtr> args;
   // 标记是否为非元组类型。
-  bool noTuple;
+  bool no_tuple;
   // 表示元组的重复类型（如果有的话）。
   std::shared_ptr<StaticType> repeats = nullptr;
 

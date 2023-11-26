@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "Pud/Common/Error.h"
+#include "Pud/Type/Static.h"
 #include "Pud/Type/Type.h"
 
 namespace Pud::Type {
@@ -59,7 +60,9 @@ auto LinkType::unify(Type* typ, Unification* undo) -> int {
     }
     // 静态类型
     if (auto ts = typ->get_static()) {
-      // TODO
+      if (ts->expr->get_id()) {
+        return unify(ts->generics[0].type.get(), undo);
+      }
     }
     // 链接类型
     if (auto t = typ->get_link()) {

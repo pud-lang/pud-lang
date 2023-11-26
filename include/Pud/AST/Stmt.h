@@ -34,7 +34,7 @@ struct Stmt : public Pud::SourceObject {
   Stmt(const Stmt& s) = default;
   explicit Stmt(const Pud::SourceInfo& s);
 
-  /// 转换节点为S表达式。
+  // 转换节点为S表达式。
   auto to_string() const -> std::string;
   virtual auto to_string(int indent) const -> std::string = 0;
 

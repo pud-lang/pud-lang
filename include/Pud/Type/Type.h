@@ -7,6 +7,8 @@
 
 #include "Pud/Common/Source.h"
 
+#define TYPE_TUPLE "Tuple"
+
 namespace Pud::Type {
 
 struct FuncType;
