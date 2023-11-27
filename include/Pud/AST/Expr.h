@@ -125,10 +125,15 @@ struct Expr : public SourceObject {
 
 using ExprPtr = std::shared_ptr<Expr>;
 
+/// 表示函数参数的一个数据结构。
 struct Param : public SourceObject {
   std::string name;
+  // 参数的类型。
   ExprPtr type;
+  // 参数的默认值。
   ExprPtr default_value;
+  // 表示参数的状态。它可以是普通参数（Normal），
+  // 泛型参数（Generic），或隐藏的泛型参数（HiddenGeneric）。
   enum {
     Normal,
     Generic,
@@ -145,10 +150,10 @@ struct Param : public SourceObject {
   auto clone() const -> Param;
 };
 
-/// None expression.
+/// None 值
 /// @li None
 struct NoneExpr : public Expr {
-  NoneExpr();
+  NoneExpr() = default;
   NoneExpr(const NoneExpr& expr) = default;
 
   auto to_string() const -> std::string override;
@@ -158,7 +163,7 @@ struct NoneExpr : public Expr {
   auto get_none() -> NoneExpr* override { return this; }
 };
 
-/// Bool expression (value).
+/// 表示布尔值表达式。
 /// @li True
 struct BoolExpr : public Expr {
   bool value;
@@ -171,18 +176,17 @@ struct BoolExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Int expression (value.suffix).
+/// 整数值表达式。
 /// @li 12
 /// @li 13u
 /// @li 000_010b
 struct IntExpr : public Expr {
-  /// Expression value is stored as a string that is parsed during the simplify
-  /// stage.
+  // 整数值的经过简化的字符串表示，如"000_010b"去掉下划线。
   std::string value;
-  /// Number suffix (e.g. "u" for "123u").
+  // 整数后缀，用于表示整数的类型，如 "u" 表示无符号整数。
   std::string suffix;
 
-  /// Parsed value and sign for "normal" 64-bit integers.
+  // 用于存储解析后的64位整数值。
   std::unique_ptr<int64_t> int_value;
 
   explicit IntExpr(int64_t int_value);
@@ -196,18 +200,17 @@ struct IntExpr : public Expr {
   auto get_int() -> IntExpr* override { return this; }
 };
 
-/// Float expression (value.suffix).
+/// 浮点数表达式。
 /// @li 12.1
 /// @li 13.15z
 /// @li e-12
 struct FloatExpr : public Expr {
-  /// Expression value is stored as a string that is parsed during the simplify
-  /// stage.
+  // 简化后的浮点数的字符串表示。
   std::string value;
-  /// Number suffix (e.g. "u" for "123u").
+  // 数字的后缀。
   std::string suffix;
 
-  /// Parsed value for 64-bit floats.
+  // 解析后的浮点数值。
   std::unique_ptr<double> float_value;
 
   explicit FloatExpr(double float_value);
@@ -219,11 +222,11 @@ struct FloatExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// String expression (prefix"value").
+/// 字符串表达式。
 /// @li s'ACGT'
 /// @li "fff"
 struct StringExpr : public Expr {
-  // Vector of {value, prefix} strings.
+  // 存储字符串及其前缀。
   std::vector<std::pair<std::string, std::string>> strings;
 
   explicit StringExpr(std::string value, std::string prefix = "");
@@ -238,7 +241,7 @@ struct StringExpr : public Expr {
   auto get_value() const -> std::string;
 };
 
-/// Identifier expression (value).
+/// 标识符表达式，即变量名或函数名。
 struct IdExpr : public Expr {
   std::string value;
 
@@ -255,9 +258,10 @@ struct IdExpr : public Expr {
   auto get_id() -> IdExpr* override { return this; }
 };
 
-/// Star (unpacking) expression (*what).
+/// 星号（解包）表达式，如 *args。
 /// @li *args
 struct StarExpr : public Expr {
+  // 要解包的对象。
   ExprPtr what;
 
   explicit StarExpr(ExprPtr what);
@@ -270,9 +274,10 @@ struct StarExpr : public Expr {
   auto get_star() -> StarExpr* override { return this; }
 };
 
-/// KeywordStar (unpacking) expression (**what).
+/// 代表双星号（关键字解包）表达式，如 **kwargs。
 /// @li **kwargs
 struct KeywordStarExpr : public Expr {
+  // 要解包的对象。
   ExprPtr what;
 
   explicit KeywordStarExpr(ExprPtr what);
@@ -283,9 +288,10 @@ struct KeywordStarExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Tuple expression ((items...)).
+/// 代表元组表达式。
 /// @li (1, a)
 struct TupleExpr : public Expr {
+  // 列表中的元素。
   std::vector<ExprPtr> items;
 
   explicit TupleExpr(std::vector<ExprPtr> items = {});
@@ -298,7 +304,7 @@ struct TupleExpr : public Expr {
   auto get_tuple() -> TupleExpr* override { return this; }
 };
 
-/// List expression ([items...]).
+/// 列表表达式。
 /// @li [1, 2]
 struct ListExpr : public Expr {
   std::vector<ExprPtr> items;
@@ -313,7 +319,7 @@ struct ListExpr : public Expr {
   auto get_list() -> ListExpr* override { return this; }
 };
 
-/// Set expression ({items...}).
+/// 集合表达式。
 /// @li {1, 2}
 struct SetExpr : public Expr {
   std::vector<ExprPtr> items;
@@ -326,10 +332,10 @@ struct SetExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Dictionary expression ({(key: value)...}).
-/// Each (key, value) pair is stored as a TupleExpr.
+/// 字典表达式。
 /// @li {'s': 1, 't': 2}
 struct DictExpr : public Expr {
+  // 字典中的键值对，以 TupleExpr 形式存储。
   std::vector<ExprPtr> items;
 
   explicit DictExpr(std::vector<ExprPtr> items);

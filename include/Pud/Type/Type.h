@@ -8,6 +8,11 @@
 #include "Pud/Common/Source.h"
 
 #define TYPE_TUPLE "Tuple"
+#define TYPE_KWTUPLE "KwTuple.N"
+#define TYPE_TYPEVAR "TypeVar"
+#define TYPE_CALLABLE "Callable"
+#define TYPE_PARTIAL "Partial.N"
+#define TYPE_OPTIONAL "Optional"
 
 namespace Pud::Type {
 
