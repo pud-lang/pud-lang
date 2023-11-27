@@ -311,4 +311,188 @@ auto DictExpr::clone() const -> ExprPtr {
 }
 void DictExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
 
+auto GeneratorBody::clone() const -> GeneratorBody {
+  return {::Pud::clone(vars), ::Pud::clone(gen), ::Pud::clone(conds)};
+}
+
+GeneratorExpr::GeneratorExpr(GeneratorExpr::GeneratorKind kind, ExprPtr expr,
+                             std::vector<GeneratorBody> loops)
+    : kind(kind), expr(std::move(expr)), loops(std::move(loops)) {}
+GeneratorExpr::GeneratorExpr(const GeneratorExpr& expr)
+    : Expr(expr),
+      kind(expr.kind),
+      expr(::Pud::clone(expr.expr)),
+      loops(::Pud::clone_nop(expr.loops)) {}
+auto GeneratorExpr::to_string() const -> std::string {
+  std::string prefix;
+  if (kind == GeneratorKind::ListGenerator) {
+    prefix = "list-";
+  }
+  if (kind == GeneratorKind::SetGenerator) {
+    prefix = "set-";
+  }
+  std::string s;
+  for (const auto& i : loops) {
+    std::string q;
+    for (const auto& k : i.conds) {
+      q += fmt::format(" (if {})", k->to_string());
+    }
+    s += fmt::format(" (for {} {}{})", i.vars->to_string(), i.gen->to_string(),
+                     q);
+  }
+  return wrap_type(fmt::format("{}gen {}{}", prefix, expr->to_string(), s));
+}
+auto GeneratorExpr::clone() const -> ExprPtr {
+  return std::make_shared<GeneratorExpr>(*this);
+}
+void GeneratorExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+DictGeneratorExpr::DictGeneratorExpr(ExprPtr key, ExprPtr expr,
+                                     std::vector<GeneratorBody> loops)
+    : key(std::move(key)), expr(std::move(expr)), loops(std::move(loops)) {}
+DictGeneratorExpr::DictGeneratorExpr(const DictGeneratorExpr& expr)
+    : Expr(expr),
+      key(::Pud::clone(expr.key)),
+      expr(::Pud::clone(expr.expr)),
+      loops(::Pud::clone_nop(expr.loops)) {}
+auto DictGeneratorExpr::to_string() const -> std::string {
+  std::string s;
+  for (const auto& i : loops) {
+    std::string q;
+    for (const auto& k : i.conds) {
+      q += fmt::format("( if {})", k->to_string());
+    }
+    s += fmt::format(" (for {} {}{})", i.vars->to_string(), i.gen->to_string(),
+                     q);
+  }
+  return wrap_type(
+      fmt::format("dict-gen {} {}{}", key->to_string(), expr->to_string(), s));
+}
+auto DictGeneratorExpr::clone() const -> ExprPtr {
+  return std::make_shared<DictGeneratorExpr>(*this);
+}
+void DictGeneratorExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+IfExpr::IfExpr(ExprPtr cond, ExprPtr ifexpr, ExprPtr elsexpr)
+    : cond(std::move(cond)),
+      ifexpr(std::move(ifexpr)),
+      elsexpr(std::move(elsexpr)) {}
+IfExpr::IfExpr(const IfExpr& expr)
+    : Expr(expr),
+      cond(::Pud::clone(expr.cond)),
+      ifexpr(::Pud::clone(expr.ifexpr)),
+      elsexpr(::Pud::clone(expr.elsexpr)) {}
+auto IfExpr::to_string() const -> std::string {
+  return wrap_type(fmt::format("if-expr {} {} {}", cond->to_string(),
+                               ifexpr->to_string(), elsexpr->to_string()));
+}
+auto IfExpr::clone() const -> ExprPtr {
+  return std::make_shared<IfExpr>(*this);
+}
+void IfExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+UnaryExpr::UnaryExpr(std::string op, ExprPtr expr)
+    : op(std::move(op)), expr(std::move(expr)) {}
+UnaryExpr::UnaryExpr(const UnaryExpr& expr)
+    : Expr(expr), op(expr.op), expr(::Pud::clone(expr.expr)) {}
+auto UnaryExpr::to_string() const -> std::string {
+  return wrap_type(fmt::format("unary \"{}\" {}", op, expr->to_string()));
+}
+auto UnaryExpr::clone() const -> ExprPtr {
+  return std::make_shared<UnaryExpr>(*this);
+}
+void UnaryExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+BinaryExpr::BinaryExpr(ExprPtr lexpr, std::string op, ExprPtr rexpr,
+                       bool in_place)
+    : op(std::move(op)),
+      lexpr(std::move(lexpr)),
+      rexpr(std::move(rexpr)),
+      in_place(in_place) {}
+BinaryExpr::BinaryExpr(const BinaryExpr& expr)
+    : Expr(expr),
+      op(expr.op),
+      lexpr(::Pud::clone(expr.lexpr)),
+      rexpr(::Pud::clone(expr.rexpr)),
+      in_place(expr.in_place) {}
+auto BinaryExpr::to_string() const -> std::string {
+  return wrap_type(fmt::format("binary \"{}\" {} {}{}", op, lexpr->to_string(),
+                               rexpr->to_string(),
+                               in_place ? " #:in-place" : ""));
+}
+auto BinaryExpr::clone() const -> ExprPtr {
+  return std::make_shared<BinaryExpr>(*this);
+}
+void BinaryExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+ChainBinaryExpr::ChainBinaryExpr(
+    std::vector<std::pair<std::string, ExprPtr>> exprs)
+    : exprs(std::move(exprs)) {}
+ChainBinaryExpr::ChainBinaryExpr(const ChainBinaryExpr& expr) : Expr(expr) {
+  for (const auto& e : expr.exprs) {
+    exprs.emplace_back(make_pair(e.first, ::Pud::clone(e.second)));
+  }
+}
+auto ChainBinaryExpr::to_string() const -> std::string {
+  std::vector<std::string> s;
+  s.reserve(exprs.size());
+  for (const auto& i : exprs) {
+    s.push_back(fmt::format("({} \"{}\")", i.first, i.second->to_string()));
+  }
+  return wrap_type(fmt::format("chain {}", join(s, " ")));
+}
+auto ChainBinaryExpr::clone() const -> ExprPtr {
+  return std::make_shared<ChainBinaryExpr>(*this);
+}
+void ChainBinaryExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+auto PipeExpr::Pipe::clone() const -> PipeExpr::Pipe {
+  return {op, ::Pud::clone(expr)};
+}
+
+PipeExpr::PipeExpr(std::vector<PipeExpr::Pipe> items)
+    : items(std::move(items)) {
+  for (auto& i : this->items) {
+    if (auto* call = i.expr->get_call()) {
+      for (auto& a : call->args) {
+        if (auto* el = a.value->get_ellipsis()) {
+          el->mode = EllipsisExpr::PIPE;
+        }
+      }
+    }
+  }
+}
+PipeExpr::PipeExpr(const PipeExpr& expr)
+    : Expr(expr),
+      items(::Pud::clone_nop(expr.items)),
+      in_types(expr.in_types) {}
+void PipeExpr::validate() const {}
+auto PipeExpr::to_string() const -> std::string {
+  std::vector<std::string> s;
+  s.reserve(items.size());
+  for (const auto& i : items) {
+    s.push_back(fmt::format("({} \"{}\")", i.expr->to_string(), i.op));
+  }
+  return wrap_type(fmt::format("pipe {}", join(s, " ")));
+}
+auto PipeExpr::clone() const -> ExprPtr {
+  return std::make_shared<PipeExpr>(*this);
+}
+void PipeExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+IndexExpr::IndexExpr(ExprPtr expr, ExprPtr index)
+    : expr(std::move(expr)), index(std::move(index)) {}
+IndexExpr::IndexExpr(const IndexExpr& expr)
+    : Expr(expr),
+      expr(::Pud::clone(expr.expr)),
+      index(::Pud::clone(expr.index)) {}
+auto IndexExpr::to_string() const -> std::string {
+  return wrap_type(
+      fmt::format("index {} {}", expr->to_string(), index->to_string()));
+}
+auto IndexExpr::clone() const -> ExprPtr {
+  return std::make_shared<IndexExpr>(*this);
+}
+void IndexExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
 }  // namespace Pud::AST

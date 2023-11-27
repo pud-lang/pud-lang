@@ -346,25 +346,31 @@ struct DictExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Generator body node helper [for vars in gen (if conds)...].
+/// 一个辅助结构体，用于表示生成器或列表推导式的循环部分。
+/// [for vars in gen (if conds)...].
 /// @li for i in lst if a if b
 struct GeneratorBody {
+  // 循环变量。
   ExprPtr vars;
+  // 生成器或可迭代对象。
   ExprPtr gen;
+  // 可选的条件表达式列表，用于过滤生成器或迭代器的元素。
   std::vector<ExprPtr> conds;
 
   auto clone() const -> GeneratorBody;
 };
 
-/// Generator or comprehension expression [(expr (loops...))].
+/// 表示生成器表达式或列表/集合推导式: [(expr (loops...))].
 /// @li [i for i in j]
 /// @li (f + 1 for j in k if j for f in j)
 struct GeneratorExpr : public Expr {
-  /// Generator kind: normal generator, list comprehension, set comprehension.
+  /// 生成器的类型（普通生成器、列表推导式、集合推导式）。
   enum GeneratorKind : uint8_t { Generator, ListGenerator, SetGenerator };
 
   GeneratorKind kind;
+  // 生成器表达式的主体。
   ExprPtr expr;
+  // 包含一个或多个 GeneratorBody 对象的向量，代表生成器或推导式的循环结构。
   std::vector<GeneratorBody> loops;
 
   GeneratorExpr(GeneratorKind kind, ExprPtr expr,
@@ -376,10 +382,12 @@ struct GeneratorExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Dictionary comprehension expression [{key: expr (loops...)}].
+/// 表示字典推导式 [{key: expr (loops...)}].
 /// @li {i: j for i, j in z.items()}
 struct DictGeneratorExpr : public Expr {
+  // 分别表示字典键和值的表达式。
   ExprPtr key, expr;
+  // 表示字典推导式中的循环结构。
   std::vector<GeneratorBody> loops;
 
   DictGeneratorExpr(ExprPtr key, ExprPtr expr,
@@ -391,9 +399,10 @@ struct DictGeneratorExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Conditional expression [cond if ifexpr else elsexpr].
+/// 条件表达式。 [cond if ifexpr else elsexpr].
 /// @li 1 if a else 2
 struct IfExpr : public Expr {
+  // 分别表示条件、条件为真时的表达式和条件为假时的表达式。
   ExprPtr cond, ifexpr, elsexpr;
 
   IfExpr(ExprPtr cond, ExprPtr ifexpr, ExprPtr elsexpr);
@@ -406,10 +415,12 @@ struct IfExpr : public Expr {
   auto get_if() -> IfExpr* override { return this; }
 };
 
-/// Unary expression [op expr].
+/// 一元表达式 [op expr].
 /// @li -56
 struct UnaryExpr : public Expr {
+  // 操作符，例如 "-" 或 "!"。
   std::string op;
+  // 操作符作用的表达式。
   ExprPtr expr;
 
   UnaryExpr(std::string op, ExprPtr expr);
@@ -422,14 +433,16 @@ struct UnaryExpr : public Expr {
   auto get_unary() -> UnaryExpr* override { return this; }
 };
 
-/// Binary expression [lexpr op rexpr].
+/// 二元表达式 [lexpr op rexpr].
 /// @li 1 + 2
 /// @li 3 or 4
 struct BinaryExpr : public Expr {
+  // 操作符，例如 "+" 或 "or"。
   std::string op;
+  // 分别表示左侧和右侧的表达式。
   ExprPtr lexpr, rexpr;
 
-  /// True if an expression modifies lhs in-place (e.g. a += b).
+  // 表明这是一个原地修改表达式，例如 "a += b"。
   bool in_place;
 
   BinaryExpr(ExprPtr lexpr, std::string op, ExprPtr rexpr,
@@ -443,7 +456,7 @@ struct BinaryExpr : public Expr {
   auto get_binary() -> BinaryExpr* override { return this; }
 };
 
-/// Chained binary expression.
+/// 链式二元操作表达式。
 /// @li 1 <= x <= 2
 struct ChainBinaryExpr : public Expr {
   std::vector<std::pair<std::string, ExprPtr>> exprs;
@@ -456,21 +469,25 @@ struct ChainBinaryExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Pipe expression [(op expr)...].
-/// op is either "" (only the first item), "|>" or "||>".
+/// 管道操作表达式。 [(op expr)...].
+/// |>: 表示将左侧表达式的输出作为右侧表达式的输入。
+/// ||>: 表示对数据进行并行处理。
 /// @li a |> b ||> c
 struct PipeExpr : public Expr {
   struct Pipe {
+    // 操作符，例如 |> 或 ||>。
     std::string op;
+    // 表达式，表示管道操作的输入。
     ExprPtr expr;
 
-    Pipe clone() const;
+    auto clone() const -> Pipe;
   };
 
+  // 包含管道中所有操作的向量。
   std::vector<Pipe> items;
-  /// Output type of a "prefix" pipe ending at the index position.
-  /// Example: for a |> b |> c, inTypes[1] is typeof(a |> b).
-  std::vector<Pud::Type::TypePtr> inTypes;
+  // 存储每个管道操作输出类型的向量。
+  // 对于序列 a |> b |> c，in_types[1] 将是 a |> b 的输出类型。
+  std::vector<Pud::Type::TypePtr> in_types;
 
   explicit PipeExpr(std::vector<Pipe> items);
   PipeExpr(const PipeExpr& expr);
@@ -482,9 +499,10 @@ struct PipeExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Index expression (expr[index]).
+/// 索引操作表达式 (expr[index]).
 /// @li a[5]
 struct IndexExpr : public Expr {
+  // 表示被索引的表达式和索引表达式。
   ExprPtr expr, index;
 
   IndexExpr(ExprPtr expr, ExprPtr index);
