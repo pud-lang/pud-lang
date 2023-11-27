@@ -658,8 +658,8 @@ struct StmtExpr : public Expr {
 /// Static tuple indexing expression (expr[index]).
 /// @li (1, 2, 3)[2]
 struct InstantiateExpr : Expr {
-  ExprPtr typeExpr;
-  std::vector<ExprPtr> typeParams;
+  ExprPtr type_expr;
+  std::vector<ExprPtr> type_params;
 
   InstantiateExpr(ExprPtr type_expr, std::vector<ExprPtr> type_params);
   /// Convenience constructor for a single type parameter.

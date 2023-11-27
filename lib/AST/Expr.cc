@@ -57,28 +57,31 @@ auto Expr::get_type() const -> Pud::Type::TypePtr { return type; }
 void Expr::set_type(Pud::Type::TypePtr t) { this->type = std::move(t); }
 auto Expr::is_type() const -> bool { return is_type_expr; }
 void Expr::mark_type() { is_type_expr = true; }
-std::string Expr::wrap_type(const std::string& sexpr) const {
+auto Expr::wrap_type(const std::string& sexpr) const -> std::string {
   auto is = sexpr;
   if (done) {
-    is.insert(findStar(is), "*");
+    is.insert(find_star(is), "*");
   }
-  auto s = format("({}{})", is,
-                  type ? format(" #:type \"{}\"", type->toString()) : "");
+  auto s =
+      fmt::format("({}{})", is,
+                  type ? fmt::format(" #:type \"{}\"", type->to_string()) : "");
   // if (hasAttr(ExprAttr::SequenceItem)) s += "%";
   return s;
 }
-bool Expr::isStatic() const {
-  return staticValue.type != StaticValue::NOT_STATIC;
+auto Expr::is_static() const -> bool {
+  return static_value.type != StaticValue::NOT_STATIC;
 }
-bool Expr::hasAttr(int attr) const { return (attributes & (1 << attr)); }
-void Expr::setAttr(int attr) { attributes |= (1 << attr); }
-std::string Expr::getTypeName() {
-  if (getId()) {
-    return getId()->value;
+auto Expr::has_attr(int attr) const -> bool {
+  return (attributes & (1 << attr));
+}
+void Expr::set_attr(int attr) { attributes |= (1 << attr); }
+auto Expr::get_type_name() -> std::string {
+  if (get_id()) {
+    return get_id()->value;
   } else {
-    auto i = dynamic_cast<InstantiateExpr*>(this);
-    seqassertn(i && i->typeExpr->getId(), "bad MRO");
-    return i->typeExpr->getId()->value;
+    auto* i = dynamic_cast<InstantiateExpr*>(this);
+    assert(i && i->type_expr->get_id() && "bad MRO");
+    return i->type_expr->get_id()->value;
   }
 }
 

@@ -17,7 +17,7 @@ message(STATUS "Project '${PROJECT_NAME}', version: '${project_version}'")
 option(PUD_OPT_BUILD_UNITTESTS "Build all pud unittests" ON)
 
 # temp define: https://discourse.llvm.org/t/python-api-problem/945
-add_compile_options(-fno-rtti)
+# add_compile_options(-fno-rtti)
 
 # simd ssse3
 add_compile_options(-mssse3)
