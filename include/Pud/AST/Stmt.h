@@ -274,7 +274,6 @@ struct WhileStmt : public Stmt {
   void accept(ASTVisitor& visitor) override;
 };
 
-// TODO: CallExpr
 /// 代表一个 for 循环语句 (for var in iter: suite; else else_suite)。
 struct ForStmt : public Stmt {
   // 迭代变量。
@@ -286,12 +285,14 @@ struct ForStmt : public Stmt {
   // 循环结束后执行的 else 语句块（如果有）。
   StmtPtr else_suite;
   ExprPtr decorator;
+  std::vector<CallExpr::Arg> omp_args;
 
-  /// Indicates if iter was wrapped with __iter__() call.
+  // Indicates if iter was wrapped with __iter__() call.
   bool wrapped;
 
   ForStmt(ExprPtr var, ExprPtr iter, StmtPtr suite,
-          StmtPtr else_suite = nullptr, ExprPtr decorator = nullptr);
+          StmtPtr else_suite = nullptr, ExprPtr decorator = nullptr,
+          std::vector<CallExpr::Arg> omp_args = {});
   ForStmt(const ForStmt& stmt);
 
   auto to_string(int indent) const -> std::string override;
@@ -452,7 +453,7 @@ struct ThrowStmt : public Stmt {
 /// @li: global a
 struct GlobalStmt : public Stmt {
   std::string var;
-  bool nonLocal;
+  bool non_local;
 
   explicit GlobalStmt(std::string var, bool non_local = false);
   GlobalStmt(const GlobalStmt& stmt) = default;
@@ -465,39 +466,42 @@ struct GlobalStmt : public Stmt {
   void accept(ASTVisitor& visitor) override;
 };
 
+// 用于表示函数或方法的各种特性和属性。
 struct Attr {
-  // Toplevel attributes
+  // 顶层属性，用于表示该函数与特定语言或平台的兼容性或特殊处理方式。
   const static std::string LLVM;
   const static std::string Python;
-  const static std::string Atomic;
-  const static std::string Property;
-  const static std::string StaticMethod;
-  const static std::string Attribute;
-  const static std::string C;
-  // Internal attributes
-  const static std::string Internal;
-  const static std::string HiddenFromUser;
-  const static std::string ForceRealize;
-  const static std::string RealizeWithoutSelf;  // not internal
-  // Compiler-generated attributes
-  const static std::string CVarArg;
-  const static std::string Method;
-  const static std::string Capture;
-  const static std::string HasSelf;
-  // Class attributes
-  const static std::string Extend;
-  const static std::string Tuple;
-  // Standard library attributes
-  const static std::string Test;
-  const static std::string Overload;
-  const static std::string Export;
-  // Function module
+  const static std::string Atomic;    // 表示函数操作是原子性的。
+  const static std::string Property;  // 表示函数作为类的属性。
+  const static std::string StaticMethod;  // 表示函数是一个静态方法。
+  const static std::string Attribute;  // 表示该函数自身就是一个属性。
+  const static std::string C;  // 表示函数与C语言或其特性相关。
+  // 内部属性，编译器内部使用的标记。
+  const static std::string Internal;  // 表示这是一个内部使用的函数或特性。
+  const static std::string HiddenFromUser;  // 表示该特性或函数对最终用户隐藏。
+  const static std::string ForceRealize;  // 表示强制执行某些编译时计算或优化。
+  const static std::string
+      RealizeWithoutSelf;  // 特定于类方法，表示可以在没有类实例的情况下实现。
+  // 编译器生成的属性，用于编译器在处理函数时的内部逻辑。
+  const static std::string CVarArg;  // 表示函数可以接受可变数量的参数。
+  const static std::string Method;  // 表示这是一个类的方法。
+  const static std::string Capture;  // 与闭包或函数作用域捕获相关。
+  const static std::string HasSelf;  // 表示函数是一个方法，需要self或this指针。
+  // 类属性，用于标记类方法的特性。
+  const static std::string Extend;  // 表示方法扩展了其所属的类。
+  const static std::string Tuple;   // 表示该方法与元组操作相关。
+  // 标准库属性，用于特定库功能的实现。
+  const static std::string Test;      // 表示这是一个测试函数。
+  const static std::string Overload;  // 表示函数重载。
+  const static std::string Export;  // 表示该函数或方法是可导出的。
+  // 表示函数所属的模块。
   std::string module;
-  // Parent class (set for methods only)
+  // 仅在函数为方法时设置，表示其父类名称。
   std::string parent_class;
-  // True if a function is decorated with __attribute__
+  // 表示函数是否被__attribute__装饰。
   bool is_attribute;
 
+  //  表示一组特殊行为方法名。
   std::set<std::string> magics;
 
   // 存储自定义属性集合。
@@ -510,17 +514,22 @@ struct Attr {
   auto has(const std::string& attr) const -> bool;
 };
 
-/// Function statement (@(attributes...) def name[funcs...](args...) -> ret:
+/// 表示一个函数声明 (@(attributes...) def name[funcs...](args...) -> ret:
 /// suite).
 /// @li: @decorator
 ///           def foo[T=int, U: int](a, b: int = 0) -> list[T]: pass
 struct FunctionStmt : public Stmt {
+  // 函数的名称。
   std::string name;
-  /// nullptr if return type is not specified.
+  // 函数的返回类型，如果没有指定则为 nullptr。
   ExprPtr ret;
+  // 一个 Param 类型的向量，表示函数的参数。
   std::vector<Param> args;
+  // 函数的实现部分，可能包含多个语句。
   StmtPtr suite;
+  // 函数的属性，使用 Attr 结构体表示。
   Attr attributes;
+  // 函数的装饰器列表。
   std::vector<ExprPtr> decorators;
 
   FunctionStmt(std::string name, ExprPtr ret, std::vector<Param> args,
@@ -537,9 +546,8 @@ struct FunctionStmt : public Stmt {
 
   void accept(ASTVisitor& visitor) override;
 
-  /// @return a function signature that consists of generics and arguments in a
-  /// S-expression form.
-  /// @li (T U (int 0))
+  // 返回函数签名的字符串表示。
+  // @li (T U (int 0))
   auto signature() const -> std::string;
   // 检查函数是否有特定属性。
   auto has_attr(const std::string& attr) const -> bool;
