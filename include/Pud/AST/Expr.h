@@ -515,12 +515,13 @@ struct IndexExpr : public Expr {
   auto get_index() -> IndexExpr* override { return this; }
 };
 
-/// Call expression (expr((name=value)...)).
+/// 表示函数或方法调用表达式 (expr((name=value)...)).
 /// @li a(1, b=2)
 struct CallExpr : public Expr {
-  /// Each argument can have a name (e.g. foo(1, b=5))
   struct Arg : public SourceObject {
+    // 参数名称。
     std::string name;
+    // 参数的值。
     ExprPtr value;
 
     auto clone() const -> Arg;
@@ -530,13 +531,15 @@ struct CallExpr : public Expr {
     Arg(ExprPtr value);
   };
 
+  // 调用的函数或方法的表达式。
   ExprPtr expr;
+  // 函数调用的参数列表。
   std::vector<Arg> args;
-  /// True if type-checker has processed and re-ordered args.
+  // 指示类型检查器是否已处理并重新排序参数。
   bool ordered;
 
   CallExpr(ExprPtr expr, std::vector<Arg> args = {});
-  /// Convenience constructors
+
   CallExpr(ExprPtr expr, std::vector<ExprPtr> args);
   template <typename... Ts>
   CallExpr(ExprPtr expr, ExprPtr arg, Ts... args)
@@ -552,14 +555,15 @@ struct CallExpr : public Expr {
   auto get_call() -> CallExpr* override { return this; }
 };
 
-/// Dot (access) expression (expr.member).
+/// 表示访问对象成员的表达式 (expr.member).
 /// @li a.b
 struct DotExpr : public Expr {
+  // 被访问对象的表达式。
   ExprPtr expr;
+  // 要访问的成员名称。
   std::string member;
 
   DotExpr(ExprPtr expr, std::string member);
-  /// Convenience constructor.
   DotExpr(const std::string& left, std::string member);
   DotExpr(const DotExpr& expr);
 
@@ -570,12 +574,13 @@ struct DotExpr : public Expr {
   auto get_dot() -> DotExpr* override { return this; }
 };
 
-/// Slice expression (st:stop:step).
+/// 表示切片操作 (st:stop:step).
 /// @li 1:10:3
 /// @li s::-1
 /// @li :::
 struct SliceExpr : public Expr {
-  /// Any of these can be nullptr to account for partial slices.
+  // 分别代表切片的开始、结束和步长，都是表达式类型。
+  // 任何一个都可以是 nullptr，表示切片操作的部分缺失。
   ExprPtr start, stop, step;
 
   SliceExpr(ExprPtr start, ExprPtr stop, ExprPtr step);
@@ -586,12 +591,11 @@ struct SliceExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Ellipsis expression.
+/// 省略号表达式
 /// @li ...
 struct EllipsisExpr : public Expr {
-  /// True if this is a target partial argument within a PipeExpr.
-  /// If true, this node will be handled differently during the type-checking
-  /// stage.
+  // 省略号在不同上下文中的类型，如作为管道表达式中的一部分、部分
+  // 参数或单独使用。
   enum EllipsisType : uint8_t { PIPE, PARTIAL, STANDALONE } mode;
 
   explicit EllipsisExpr(EllipsisType mode = STANDALONE);
@@ -604,7 +608,7 @@ struct EllipsisExpr : public Expr {
   auto get_ellipsis() -> EllipsisExpr* override { return this; }
 };
 
-/// Lambda expression (lambda (vars)...: expr).
+/// 表示匿名函数 (lambda (vars)...: expr).
 /// @li lambda a, b: a + b
 struct LambdaExpr : public Expr {
   std::vector<std::string> vars;
@@ -618,7 +622,7 @@ struct LambdaExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Yield (send to generator) expression.
+/// 用于表示生成器中的 yield 操作。
 /// @li (yield)
 struct YieldExpr : public Expr {
   YieldExpr();
@@ -629,7 +633,7 @@ struct YieldExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Assignment (walrus) expression (var := expr).
+/// 赋值表达式 (var := expr).
 /// @li a := 5 + 3
 struct AssignExpr : public Expr {
   ExprPtr var, expr;
@@ -642,8 +646,8 @@ struct AssignExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Range expression (start ... end).
-/// Used only in match-case statements.
+/// 表示范围表达式 (start ... end).
+/// 通常在匹配（match-case）语句中使用。
 /// @li 1 ... 2
 struct RangeExpr : public Expr {
   ExprPtr start, stop;
@@ -656,14 +660,13 @@ struct RangeExpr : public Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// The following nodes are created after the simplify stage.
-
-/// Statement expression (stmts...; expr).
-/// Statements are evaluated only if the expression is evaluated
-/// (to support short-circuiting).
+/// (stmts...; expr).
+/// 在表达式中嵌入语句，用于支持更复杂的表达式。
 /// @li (a = 1; b = 2; a + b)
 struct StmtExpr : public Expr {
+  // 一系列语句。
   std::vector<std::shared_ptr<Stmt>> stmts;
+  // 主表达式，其值将作为整个 StmtExpr 的值。
   ExprPtr expr;
 
   StmtExpr(std::vector<std::shared_ptr<Stmt>> stmts, ExprPtr expr);
@@ -682,11 +685,12 @@ struct StmtExpr : public Expr {
 /// Static tuple indexing expression (expr[index]).
 /// @li (1, 2, 3)[2]
 struct InstantiateExpr : Expr {
+  // 要实例化的类型表达式。
   ExprPtr type_expr;
+  // 类型参数列表。
   std::vector<ExprPtr> type_params;
 
   InstantiateExpr(ExprPtr type_expr, std::vector<ExprPtr> type_params);
-  /// Convenience constructor for a single type parameter.
   InstantiateExpr(ExprPtr type_expr, ExprPtr type_param);
   InstantiateExpr(const InstantiateExpr& expr);
 

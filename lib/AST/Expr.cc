@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Pud/AST/ASTVisitor.h"
@@ -494,5 +495,227 @@ auto IndexExpr::clone() const -> ExprPtr {
   return std::make_shared<IndexExpr>(*this);
 }
 void IndexExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+auto CallExpr::Arg::clone() const -> CallExpr::Arg {
+  return {name, ::Pud::clone(value)};
+}
+CallExpr::Arg::Arg(const SourceInfo& info, const std::string& name,
+                   ExprPtr value)
+    : name(name), value(std::move(value)) {
+  set_source_info(info);
+}
+CallExpr::Arg::Arg(const std::string& name, ExprPtr value)
+    : name(name), value(value) {
+  if (value) {
+    set_source_info(value->get_source_info());
+  }
+}
+CallExpr::Arg::Arg(ExprPtr value) : CallExpr::Arg("", value) {}
+
+CallExpr::CallExpr(const CallExpr& expr)
+    : Expr(expr),
+      expr(::Pud::clone(expr.expr)),
+      args(::Pud::clone_nop(expr.args)),
+      ordered(expr.ordered) {}
+CallExpr::CallExpr(ExprPtr expr, std::vector<CallExpr::Arg> args)
+    : expr(std::move(expr)), args(std::move(args)), ordered(false) {
+  validate();
+}
+CallExpr::CallExpr(ExprPtr expr, std::vector<ExprPtr> args)
+    : expr(std::move(expr)), ordered(false) {
+  for (auto& a : args) {
+    if (a) {
+      this->args.push_back({"", std::move(a)});
+    }
+  }
+  validate();
+}
+void CallExpr::validate() const {
+  bool names_started = false;
+  bool found_ellipsis = false;
+  for (const auto& a : args) {
+    if (a.name.empty() && names_started &&
+        !(dynamic_cast<KeywordStarExpr*>(a.value.get()) ||
+          a.value->get_ellipsis())) {
+      Err(Error::CALL_NAME_ORDER, a.value);
+    }
+    if (!a.name.empty() && (a.value->get_star() ||
+                            dynamic_cast<KeywordStarExpr*>(a.value.get()))) {
+      Err(Error::CALL_NAME_STAR, a.value);
+    }
+    if (a.value->get_ellipsis() && found_ellipsis) {
+      Err(Error::CALL_ELLIPSIS, a.value);
+    }
+    found_ellipsis |= bool(a.value->get_ellipsis());
+    names_started |= !a.name.empty();
+  }
+}
+auto CallExpr::to_string() const -> std::string {
+  std::string s;
+  for (const auto& i : args) {
+    if (i.name.empty()) {
+      s += " " + i.value->to_string();
+    } else {
+      s +=
+          fmt::format("({}{})", i.value->to_string(),
+                      i.name.empty() ? "" : fmt::format(" #:name '{}", i.name));
+    }
+  }
+  return wrap_type(fmt::format("call {} {}", expr->to_string(), s));
+}
+auto CallExpr::clone() const -> ExprPtr {
+  return std::make_shared<CallExpr>(*this);
+}
+void CallExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+DotExpr::DotExpr(ExprPtr expr, std::string member)
+    : expr(std::move(expr)), member(std::move(member)) {}
+DotExpr::DotExpr(const std::string& left, std::string member)
+    : expr(std::make_shared<IdExpr>(left)), member(std::move(member)) {}
+DotExpr::DotExpr(const DotExpr& expr)
+    : Expr(expr), expr(::Pud::clone(expr.expr)), member(expr.member) {}
+auto DotExpr::to_string() const -> std::string {
+  return wrap_type(fmt::format("dot {} '{}", expr->to_string(), member));
+}
+auto DotExpr::clone() const -> ExprPtr {
+  return std::make_shared<DotExpr>(*this);
+}
+void DotExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+SliceExpr::SliceExpr(ExprPtr start, ExprPtr stop, ExprPtr step)
+    : start(std::move(start)), stop(std::move(stop)), step(std::move(step)) {}
+SliceExpr::SliceExpr(const SliceExpr& expr)
+    : Expr(expr),
+      start(::Pud::clone(expr.start)),
+      stop(::Pud::clone(expr.stop)),
+      step(::Pud::clone(expr.step)) {}
+auto SliceExpr::to_string() const -> std::string {
+  return wrap_type(
+      fmt::format("slice{}{}{}",
+                  start ? fmt::format(" #:start {}", start->to_string()) : "",
+                  stop ? fmt::format(" #:end {}", stop->to_string()) : "",
+                  step ? fmt::format(" #:step {}", step->to_string()) : ""));
+}
+auto SliceExpr::clone() const -> ExprPtr {
+  return std::make_shared<SliceExpr>(*this);
+}
+void SliceExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+EllipsisExpr::EllipsisExpr(EllipsisType mode) : mode(mode) {}
+auto EllipsisExpr::to_string() const -> std::string {
+  return wrap_type(fmt::format(
+      "ellipsis{}",
+      mode == PIPE ? " #:pipe" : (mode == PARTIAL ? "#:partial" : "")));
+}
+auto EllipsisExpr::clone() const -> ExprPtr {
+  return std::make_shared<EllipsisExpr>(*this);
+}
+void EllipsisExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+LambdaExpr::LambdaExpr(std::vector<std::string> vars, ExprPtr expr)
+    : vars(std::move(vars)), expr(std::move(expr)) {}
+LambdaExpr::LambdaExpr(const LambdaExpr& expr)
+    : Expr(expr), vars(expr.vars), expr(::Pud::clone(expr.expr)) {}
+auto LambdaExpr::to_string() const -> std::string {
+  return wrap_type(
+      fmt::format("lambda ({}) {}", join(vars, " "), expr->to_string()));
+}
+auto LambdaExpr::clone() const -> ExprPtr {
+  return std::make_shared<LambdaExpr>(*this);
+}
+void LambdaExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+YieldExpr::YieldExpr() = default;
+auto YieldExpr::to_string() const -> std::string { return "yield-expr"; }
+auto YieldExpr::clone() const -> ExprPtr {
+  return std::make_shared<YieldExpr>(*this);
+}
+void YieldExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+AssignExpr::AssignExpr(ExprPtr var, ExprPtr expr)
+    : var(std::move(var)), expr(std::move(expr)) {}
+AssignExpr::AssignExpr(const AssignExpr& expr)
+    : Expr(expr), var(::Pud::clone(expr.var)), expr(::Pud::clone(expr.expr)) {}
+auto AssignExpr::to_string() const -> std::string {
+  return wrap_type(
+      fmt::format("assign-expr '{} {}", var->to_string(), expr->to_string()));
+}
+auto AssignExpr::clone() const -> ExprPtr {
+  return std::make_shared<AssignExpr>(*this);
+}
+void AssignExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+RangeExpr::RangeExpr(ExprPtr start, ExprPtr stop)
+    : start(std::move(start)), stop(std::move(stop)) {}
+RangeExpr::RangeExpr(const RangeExpr& expr)
+    : Expr(expr),
+      start(::Pud::clone(expr.start)),
+      stop(::Pud::clone(expr.stop)) {}
+auto RangeExpr::to_string() const -> std::string {
+  return wrap_type(
+      fmt::format("range {} {}", start->to_string(), stop->to_string()));
+}
+auto RangeExpr::clone() const -> ExprPtr {
+  return std::make_shared<RangeExpr>(*this);
+}
+void RangeExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+StmtExpr::StmtExpr(std::vector<std::shared_ptr<Stmt>> stmts, ExprPtr expr)
+    : stmts(std::move(stmts)), expr(std::move(expr)) {}
+StmtExpr::StmtExpr(std::shared_ptr<Stmt> stmt, ExprPtr expr)
+    : expr(std::move(expr)) {
+  stmts.push_back(std::move(stmt));
+}
+StmtExpr::StmtExpr(std::shared_ptr<Stmt> stmt, std::shared_ptr<Stmt> stmt2,
+                   ExprPtr expr)
+    : expr(std::move(expr)) {
+  stmts.push_back(std::move(stmt));
+  stmts.push_back(std::move(stmt2));
+}
+StmtExpr::StmtExpr(const StmtExpr& expr)
+    : Expr(expr),
+      stmts(::Pud::clone(expr.stmts)),
+      expr(::Pud::clone(expr.expr)) {}
+auto StmtExpr::to_string() const -> std::string {
+  return wrap_type(
+      fmt::format("stmt-expr ({}) {}", combine(stmts, " "), expr->to_string()));
+}
+auto StmtExpr::clone() const -> ExprPtr {
+  return std::make_shared<StmtExpr>(*this);
+}
+void StmtExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+InstantiateExpr::InstantiateExpr(ExprPtr type_expr,
+                                 std::vector<ExprPtr> type_params)
+    : type_expr(std::move(type_expr)), type_params(std::move(type_params)) {}
+InstantiateExpr::InstantiateExpr(ExprPtr type_expr, ExprPtr type_param)
+    : type_expr(std::move(type_expr)) {
+  type_params.push_back(std::move(type_param));
+}
+InstantiateExpr::InstantiateExpr(const InstantiateExpr& expr)
+    : Expr(expr),
+      type_expr(::Pud::clone(expr.type_expr)),
+      type_params(::Pud::clone(expr.type_params)) {}
+auto InstantiateExpr::to_string() const -> std::string {
+  return wrap_type(fmt::format("instantiate {} {}", type_expr->to_string(),
+                               combine(type_params)));
+}
+auto InstantiateExpr::clone() const -> ExprPtr {
+  return std::make_shared<InstantiateExpr>(*this);
+}
+void InstantiateExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+auto get_static_generic(Expr* e) -> StaticValue::Type {
+  if (e && e->get_index() && e->get_index()->expr->is_id("Static")) {
+    if (e->get_index()->index && e->get_index()->index->is_id("str")) {
+      return StaticValue::Type::STRING;
+    }
+    if (e->get_index()->index && e->get_index()->index->is_id("int")) {
+      return StaticValue::Type::INT;
+    }
+    return StaticValue::Type::NOT_SUPPORTED;
+  }
+  return StaticValue::Type::NOT_STATIC;
+}
 
 }  // namespace Pud::AST
