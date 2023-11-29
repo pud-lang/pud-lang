@@ -571,13 +571,49 @@ struct FunctionStmt : public Stmt {
 ///           class F[T]:
 ///              m: T
 ///              def __new__() -> F[T]: ...
+/// # 装饰器
+/// @decorator
+/// class MyClass(BaseClass, OtherBaseClass):
+///     # 类变量（字段或属性）
+///     attribute1: int
+///     attribute2: str
+/// 
+///     # 类方法
+///     def method1(self, param1: int) -> str:
+///         return str(param1)
+/// 
+///     # 静态方法
+///     @staticmethod
+///     def static_method(param2: str) -> int:
+///         return len(param2)
+/// -name: 'MyClass' - 类名。
+///
+/// -args: 包含 attribute1 和 attribute2 的 Param 对象列表。
+///  这些是类的字段或属性，每个 Param 对象包含字段名和类型（例如，int 和 str）。
+///
+/// -suite: 包含类体中定义的方法（例如 method1 和 static_method）的 StmtPtr 类型的语句集合。
+///
+/// -attributes: 可以包含类的额外信息，例如是否是原子类。
+///
+/// -decorators: 装饰器列表。在这个例子中，包含了一个 ExprPtr 类型的表达式，对应于 @decorator。
+///
+/// -base_classes: 基类列表。在这个例子中，BaseClass 和 OtherBaseClass 被包含在这个列表中。
+///
+/// -static_base_classes: 静态基类列表。这通常用于特殊情况，本例中没有展示。
 struct ClassStmt : public Stmt {
+  // 类名的字符串表示。
   std::string name;
+  // 类的参数列表。这些参数表示类的字段或属性。
   std::vector<Param> args;
+  // 代表类体的 StmtPtr 类型的语句。通常包含方法定义等。
   StmtPtr suite;
+  // 类的属性，Attr 类型。包含类的额外信息，如是否是原子类、是否应该实现为静态方法等。
   Attr attributes;
+  // 装饰器列表，每个装饰器是一个 ExprPtr 类型的表达式。
   std::vector<ExprPtr> decorators;
+  // 基类列表，每个基类是一个 ExprPtr 类型的表达式。
   std::vector<ExprPtr> base_classes;
+  // 静态基类列表，用于某些特殊情况。
   std::vector<ExprPtr> static_base_classes;
 
   ClassStmt(std::string name, std::vector<Param> args, StmtPtr suite,
@@ -597,19 +633,22 @@ struct ClassStmt : public Stmt {
 
   void accept(ASTVisitor& visitor) override;
 
-  /// @return true if a class is a tuple-like record (e.g. has a "@tuple"
-  /// attribute)
+  // 检查类是否是类似元组的记录（例如，具有 "@tuple" 属性）。
   auto is_record() const -> bool;
+  // 检查类是否具有指定的属性。
   auto has_attr(const std::string& attr) const -> bool;
 
   auto get_class() -> ClassStmt* override { return this; }
 
+  // 解析并处理类的装饰器。
   void parse_decorators();
+  // 用于判断给定的 Param 是否是类变量。
   static auto is_class_var(const Param& p) -> bool;
+  // 提取类的文档字符串，通常是类定义内的第一个字符串。
   auto get_doc_str() -> std::string;
 };
 
-/// Yield-from statement (yield from expr).
+/// 表示 Python 中的 yield from 语句，用于委托生成器 (yield from expr).
 /// @li: yield from it
 struct YieldFromStmt : public Stmt {
   ExprPtr expr;
@@ -625,11 +664,10 @@ struct YieldFromStmt : public Stmt {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// With statement (with (item as var)...: suite).
+/// 表示 Python 中的 with 语句，用于资源管理 (with (item as var)...: suite).
 /// @li: with foo(), bar() as b: pass
 struct WithStmt : public Stmt {
   std::vector<ExprPtr> items;
-  /// empty string if a corresponding item is unnamed
   std::vector<std::string> vars;
   StmtPtr suite;
 
@@ -646,7 +684,7 @@ struct WithStmt : public Stmt {
   void accept(ASTVisitor& visitor) override;
 };
 
-/// Custom block statement (foo: ...).
+/// 表示自定义的语句块 (foo: ...).
 /// @li: pt_tree: pass
 struct CustomStmt : public Stmt {
   std::string keyword;
@@ -663,8 +701,6 @@ struct CustomStmt : public Stmt {
 
   void accept(ASTVisitor& visitor) override;
 };
-
-/// The following nodes are created after the simplify stage.
 
 /// Member assignment statement (lhs.member = rhs).
 /// @li: a.x = b

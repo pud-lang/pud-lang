@@ -689,4 +689,299 @@ auto FunctionStmt::get_non_inferrable_generics()
   return non_inferrable_generics;
 }
 
+ClassStmt::ClassStmt(std::string name, std::vector<Param> args, StmtPtr suite,
+                     std::vector<ExprPtr> decorators,
+                     std::vector<ExprPtr> base_classes,
+                     std::vector<ExprPtr> static_base_classes)
+    : name(std::move(name)),
+      args(std::move(args)),
+      suite(std::move(suite)),
+      decorators(std::move(decorators)),
+      static_base_classes(std::move(static_base_classes)) {
+  for (auto& b : base_classes) {
+    if (b->get_index() && b->get_index()->expr->is_id("Static")) {
+      this->static_base_classes.push_back(b->get_index()->index);
+    } else {
+      this->base_classes.push_back(b);
+    }
+  }
+  parse_decorators();
+}
+ClassStmt::ClassStmt(std::string name, std::vector<Param> args, StmtPtr suite,
+                     Attr attr)
+    : name(std::move(name)),
+      args(std::move(args)),
+      suite(std::move(suite)),
+      attributes(std::move(attr)) {
+  validate();
+}
+ClassStmt::ClassStmt(const ClassStmt& stmt)
+    : Stmt(stmt),
+      name(stmt.name),
+      args(::Pud::clone_nop(stmt.args)),
+      suite(::Pud::clone(stmt.suite)),
+      attributes(stmt.attributes),
+      decorators(::Pud::clone(stmt.decorators)),
+      base_classes(::Pud::clone(stmt.base_classes)),
+      static_base_classes(::Pud::clone(stmt.static_base_classes)) {}
+auto ClassStmt::to_string(int indent) const -> std::string {
+  std::string pad =
+      indent > 0 ? ("\n" + std::string(indent + INDENT_SIZE, ' ')) : " ";
+  std::vector<std::string> bases;
+  for (auto& b : base_classes)
+    bases.push_back(b->to_string());
+  for (auto& b : static_base_classes)
+    bases.push_back(fmt::format("(static {})", b->to_string()));
+  std::string as;
+  for (int i = 0; i < args.size(); i++)
+    as += (i ? pad : "") + args[i].to_string();
+  std::vector<std::string> attr;
+  for (auto& a : decorators)
+    attr.push_back(fmt::format("(dec {})", a->to_string()));
+  return fmt::format(
+      "(class '{}{}{}{}{}{})", name,
+      bases.empty() ? "" : fmt::format(" (bases {})", join(bases, " ")),
+      attr.empty() ? "" : fmt::format(" (attr {})", join(attr, " ")),
+      as.empty() ? as : pad + as, pad,
+      suite ? suite->to_string(indent >= 0 ? indent + INDENT_SIZE : -1)
+            : "(suite)");
+}
+void ClassStmt::validate() const {
+  std::unordered_set<std::string> seen;
+  if (attributes.has(Attr::Extend) && !args.empty())
+    Err(Error::CLASS_EXTENSION, args[0]);
+  if (attributes.has(Attr::Extend) &&
+      !(base_classes.empty() && static_base_classes.empty()))
+    Err(Error::CLASS_EXTENSION,
+        base_classes.empty() ? static_base_classes[0] : base_classes[0]);
+  for (auto& a : args) {
+    if (!a.type && !a.default_value)
+      Err(Error::CLASS_MISSING_TYPE, a, a.name);
+    if (in(seen, a.name))
+      Err(Error::CLASS_ARG_TWICE, a, a.name);
+    seen.insert(a.name);
+  }
+}
+auto ClassStmt::clone() const -> StmtPtr {
+  return std::make_shared<ClassStmt>(*this);
+}
+void ClassStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
+auto ClassStmt::is_record() const -> bool { return has_attr(Attr::Tuple); }
+auto ClassStmt::has_attr(const std::string& attr) const -> bool {
+  return attributes.has(attr);
+}
+void ClassStmt::parse_decorators() {
+  // @tuple(init=, repr=, eq=, order=, hash=, pickle=, container=, python=,
+  // add=, internal=...)
+  // @dataclass(...)
+  // @extend
+
+  std::map<std::string, bool> tuple_magics = {
+      {"new", true},           {"repr", false},    {"hash", false},
+      {"eq", false},           {"ne", false},      {"lt", false},
+      {"le", false},           {"gt", false},      {"ge", false},
+      {"pickle", true},        {"unpickle", true}, {"to_py", false},
+      {"from_py", false},      {"iter", false},    {"getitem", false},
+      {"len", false},          {"to_gpu", false},  {"from_gpu", false},
+      {"from_gpu_new", false}, {"tuplesize", true}};
+
+  for (auto& d : decorators) {
+    if (d->is_id("deduce")) {
+      attributes.custom_attr.insert("deduce");
+    } else if (d->is_id("__notuple__")) {
+      attributes.custom_attr.insert("__notuple__");
+    } else if (auto c = d->get_call()) {
+      if (c->expr->is_id(Attr::Tuple)) {
+        attributes.set(Attr::Tuple);
+        for (auto& m : tuple_magics)
+          m.second = true;
+      } else if (!c->expr->is_id("dataclass")) {
+        Err(Error::CLASS_BAD_DECORATOR, c->expr);
+      } else if (attributes.has(Attr::Tuple)) {
+        Err(Error::CLASS_CONFLICT_DECORATOR, c, "dataclass", Attr::Tuple);
+      }
+      for (auto& a : c->args) {
+        auto b = dynamic_cast<BoolExpr*>(a.value.get());
+        if (!b)
+          Err(Error::CLASS_NONSTATIC_DECORATOR, a);
+        char val = char(b->value);
+        if (a.name == "init") {
+          tuple_magics["new"] = val;
+        } else if (a.name == "repr") {
+          tuple_magics["repr"] = val;
+        } else if (a.name == "eq") {
+          tuple_magics["eq"] = tuple_magics["ne"] = val;
+        } else if (a.name == "order") {
+          tuple_magics["lt"] = tuple_magics["le"] = tuple_magics["gt"] =
+              tuple_magics["ge"] = val;
+        } else if (a.name == "hash") {
+          tuple_magics["hash"] = val;
+        } else if (a.name == "pickle") {
+          tuple_magics["pickle"] = tuple_magics["unpickle"] = val;
+        } else if (a.name == "python") {
+          tuple_magics["to_py"] = tuple_magics["from_py"] = val;
+        } else if (a.name == "gpu") {
+          tuple_magics["to_gpu"] = tuple_magics["from_gpu"] =
+              tuple_magics["from_gpu_new"] = val;
+        } else if (a.name == "container") {
+          tuple_magics["iter"] = tuple_magics["getitem"] = val;
+        } else {
+          Err(Error::CLASS_BAD_DECORATOR_ARG, a);
+        }
+      }
+    } else if (d->is_id(Attr::Tuple)) {
+      if (attributes.has(Attr::Tuple))
+        Err(Error::CLASS_MULTIPLE_DECORATORS, d, Attr::Tuple);
+      attributes.set(Attr::Tuple);
+      for (auto& m : tuple_magics) {
+        m.second = true;
+      }
+    } else if (d->is_id(Attr::Extend)) {
+      attributes.set(Attr::Extend);
+      if (decorators.size() != 1)
+        Err(Error::CLASS_SINGLE_DECORATOR, decorators[decorators[0] == d],
+            Attr::Extend);
+    } else if (d->is_id(Attr::Internal)) {
+      attributes.set(Attr::Internal);
+    } else {
+      Err(Error::CLASS_BAD_DECORATOR, d);
+    }
+  }
+  if (attributes.has("deduce"))
+    tuple_magics["new"] = false;
+  if (!attributes.has(Attr::Tuple)) {
+    tuple_magics["init"] = tuple_magics["new"];
+    tuple_magics["new"] = tuple_magics["raw"] = true;
+    tuple_magics["len"] = false;
+  }
+  tuple_magics["dict"] = true;
+  // Internal classes do not get any auto-generated members.
+  attributes.magics.clear();
+  if (!attributes.has(Attr::Internal)) {
+    for (auto& m : tuple_magics)
+      if (m.second)
+        attributes.magics.insert(m.first);
+  }
+
+  validate();
+}
+auto ClassStmt::is_class_var(const Param& p) -> bool {
+  if (!p.default_value)
+    return false;
+  if (!p.type)
+    return true;
+  if (auto i = p.type->get_index())
+    return i->expr->is_id("ClassVar");
+  return false;
+}
+auto ClassStmt::get_doc_str() -> std::string {
+  if (auto s = suite->first_in_block()) {
+    if (auto e = s->get_expr()) {
+      if (auto ss = e->expr->get_string())
+        return ss->get_value();
+    }
+  }
+  return "";
+}
+
+YieldFromStmt::YieldFromStmt(ExprPtr expr) : expr(std::move(expr)) {}
+YieldFromStmt::YieldFromStmt(const YieldFromStmt& stmt)
+    : Stmt(stmt), expr(::Pud::clone(stmt.expr)) {}
+auto YieldFromStmt::to_string(int) const -> std::string {
+  return fmt::format("(yield-from {})", expr->to_string());
+}
+auto YieldFromStmt::clone() const -> StmtPtr {
+  return std::make_shared<YieldFromStmt>(*this);
+}
+void YieldFromStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+WithStmt::WithStmt(std::vector<ExprPtr> items, std::vector<std::string> vars,
+                   StmtPtr suite)
+    : items(std::move(items)), vars(std::move(vars)), suite(std::move(suite)) {
+  assert(this->items.size() == this->vars.size() && "vector size mismatch");
+}
+WithStmt::WithStmt(std::vector<std::pair<ExprPtr, ExprPtr>> item_var_pairs,
+                   StmtPtr suite)
+    : suite(std::move(suite)) {
+  for (auto& i : item_var_pairs) {
+    items.push_back(std::move(i.first));
+    if (i.second) {
+      if (!i.second->get_id())
+        throw;
+      vars.push_back(i.second->get_id()->value);
+    } else {
+      vars.emplace_back();
+    }
+  }
+}
+WithStmt::WithStmt(const WithStmt& stmt)
+    : Stmt(stmt),
+      items(::Pud::clone(stmt.items)),
+      vars(stmt.vars),
+      suite(::Pud::clone(stmt.suite)) {}
+auto WithStmt::to_string(int indent) const -> std::string {
+  std::string pad =
+      indent > 0 ? ("\n" + std::string(indent + INDENT_SIZE, ' ')) : " ";
+  std::vector<std::string> as;
+  as.reserve(items.size());
+  for (int i = 0; i < items.size(); i++) {
+    as.push_back(!vars[i].empty() ? fmt::format("({} #:var '{})",
+                                                items[i]->to_string(), vars[i])
+                                  : items[i]->to_string());
+  }
+  return fmt::format("(with ({}){}{})", join(as, " "), pad,
+                     suite->to_string(indent >= 0 ? indent + INDENT_SIZE : -1));
+}
+auto WithStmt::clone() const -> StmtPtr {
+  return std::make_shared<WithStmt>(*this);
+}
+void WithStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+CustomStmt::CustomStmt(std::string keyword, ExprPtr expr, StmtPtr suite)
+    : keyword(std::move(keyword)),
+      expr(std::move(expr)),
+      suite(std::move(suite)) {}
+CustomStmt::CustomStmt(const CustomStmt& stmt)
+    : Stmt(stmt),
+      keyword(stmt.keyword),
+      expr(::Pud::clone(stmt.expr)),
+      suite(::Pud::clone(stmt.suite)) {}
+auto CustomStmt::to_string(int indent) const -> std::string {
+  std::string pad =
+      indent > 0 ? ("\n" + std::string(indent + INDENT_SIZE, ' ')) : " ";
+  return fmt::format(
+      "(custom-{} {}{}{})", keyword,
+      expr ? fmt::format(" #:expr {}", expr->to_string()) : "", pad,
+      suite ? suite->to_string(indent >= 0 ? indent + INDENT_SIZE : -1) : "");
+}
+auto CustomStmt::clone() const -> StmtPtr {
+  return std::make_shared<CustomStmt>(*this);
+}
+void CustomStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+AssignMemberStmt::AssignMemberStmt(ExprPtr lhs, std::string member, ExprPtr rhs)
+    : lhs(std::move(lhs)), member(std::move(member)), rhs(std::move(rhs)) {}
+AssignMemberStmt::AssignMemberStmt(const AssignMemberStmt& stmt)
+    : Stmt(stmt),
+      lhs(::Pud::clone(stmt.lhs)),
+      member(stmt.member),
+      rhs(::Pud::clone(stmt.rhs)) {}
+auto AssignMemberStmt::to_string(int) const -> std::string {
+  return fmt::format("(assign-member {} {} {})", lhs->to_string(), member,
+                     rhs->to_string());
+}
+auto AssignMemberStmt::clone() const -> StmtPtr {
+  return std::make_shared<AssignMemberStmt>(*this);
+}
+void AssignMemberStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
+CommentStmt::CommentStmt(std::string comment) : comment(std::move(comment)) {}
+auto CommentStmt::to_string(int) const -> std::string {
+  return fmt::format("(comment \"{}\")", comment);
+}
+auto CommentStmt::clone() const -> StmtPtr {
+  return std::make_shared<CommentStmt>(*this);
+}
+void CommentStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
+
 }  // namespace Pud::AST
