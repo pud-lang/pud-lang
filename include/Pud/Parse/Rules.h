@@ -21,6 +21,13 @@ struct ParseContext {
   ParseContext(int parens = 0, int line_offset = 0,  // NOLINT(*)
                int col_offset = 0)
       : parens(parens), line_offset(line_offset), col_offset(col_offset) {}
+
+  bool has_custom_stmt_keyword(const std::string &kwd, bool has_expr) const {
+    return false;
+  }
+  bool has_custom_expr_stmt(const std::string &kwd) const {
+    return false;
+  }
 };
 
 }  // namespace Pud::Parse

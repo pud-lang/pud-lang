@@ -5,9 +5,12 @@
 #include "Pud/AST/Expr.h"
 #include "Pud/AST/Stmt.h"
 #include "Pud/AST/Types.h"
+#include "Pud/Common/Clone.h"
 #include "Pud/Common/Source.h"
+#include "Pud/Common/Str.h"
 
 using namespace std;
+using namespace Pud;
 using namespace Pud::AST;
 using namespace Pud::Parse;
 
@@ -2108,7 +2111,7 @@ auto fn_if_stmt(peg::SemanticValues& VS, any& DT) {
     } else {
       if (i) {
         p->else_suite = ast<IfStmt>(LOC, nullptr, nullptr);
-        p = (IfStmt*)(p->else_ssuite.get());
+        p = (IfStmt*)(p->else_suite.get());
       }
       p->cond = ac_expr(VS[i]);
       p->if_suite = ac_stmt(VS[i + 1]);
@@ -2169,7 +2172,7 @@ auto pred_custom_stmt(const peg::SemanticValues& VS, const any& DT,
   const auto& CTX = any_cast<const ParseContext&>(DT);
 
   auto kwd = ac<string>(V0);
-  return CTX.hasCustomStmtKeyword(kwd, VS.choice() == 0);  // ignore it
+  return CTX.has_custom_stmt_keyword(kwd, VS.choice() == 0);  // ignore it
 };
 
 auto fn_genexp(peg::SemanticValues& VS, any& DT) {
@@ -2196,7 +2199,7 @@ auto pred_custom_small_stmt(const peg::SemanticValues& VS, const any& DT,
   const auto& CTX = any_cast<const ParseContext&>(DT);
 
   auto kwd = ac<string>(V0);
-  return CTX.hasCustomExprStmt(kwd);  // ignore it
+  return CTX.has_custom_expr_stmt(kwd);  // ignore it
 };
 
 auto fn_pipe(peg::SemanticValues& VS, any& DT) {
@@ -2514,8 +2517,8 @@ auto fn_dictcomp(peg::SemanticValues& VS, any& DT) {
                              LI.second + CTX.col_offset, VS.sv().size());
 
   auto p = ac<ExprPtr>(V0);
-  return ast<DictGeneratorExpr>(LOC, p->getTuple()->items[0],
-                                p->getTuple()->items[1],
+  return ast<DictGeneratorExpr>(LOC, p->get_tuple()->items[0],
+                                p->get_tuple()->items[1],
                                 ac<SemVals>(V1).transform<GeneratorBody>());
 };
 
@@ -2642,7 +2645,7 @@ auto pred_STRING(const peg::SemanticValues& VS, const any& DT,
   return true;
 };
 
-void init_pud_actions(peg::Grammar& P) {
+void init_pud_actions(peg::Grammar& grammar) {
   grammar["format_spec"] = fn_format_spec;
   grammar["EXTERNDENT"] = fn_EXTERNDENT;
   grammar["EXTERNDENT"].predicate = pred_EXTERNDENT;
