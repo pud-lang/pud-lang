@@ -23,6 +23,8 @@ struct SourceInfo {
   int id;  // 用于区分不同的实例。
 };
 
+auto operator<<(std::ostream& out, const SourceInfo& src) -> std::ostream&;
+
 struct SourceObject {
  public:
   SourceObject() = default;
