@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <utility>
 
+#include "Pud/Common/Error.h"
 #include "Pud/IR/Attribute.h"
 #include "Pud/IR/Util/Iterators.h"
 #include "Pud/IR/Util/Visitor.h"
@@ -201,11 +202,11 @@ class Node {
 
   auto replace_used_value(Value* old, Value* new_value) -> int;
 
+  // 处理节点使用的类型。
   virtual auto get_used_types() const -> std::vector<Types::Type*> {
     return {};
   }
 
-  // 处理节点使用的类型。
   virtual auto replace_used_type(const std::string& name, Types::Type* new_type)
       -> int {
     return 0;
@@ -252,7 +253,7 @@ class Node {
 // 而这个替换操作可以通过这些类轻松实现。
 
 // 在实际应用中，你可以创建一个节点类，继承自 ReplaceableNodeBase，
-// 并为其提供特定于该节点类型的方法和属性。然后，你可以使用 accept 
+// 并为其提供特定于该节点类型的方法和属性。然后，你可以使用 accept
 // 方法来实现节点特定的访问者行为，例如，用于代码生成或优化的逻辑。
 // 如果需要，在优化过程中可以使用 replace_all 方法替换节点。
 
@@ -319,7 +320,7 @@ class ReplaceableNodeBase : public AcceptorExtend<Derived, Node> {
 
   // 将该节点替换为另一个节点。只有当 replaceable 为真时，才可以调用此方法。
   void replace_all(Derived* v) {
-    assert(replaceable && "node {} not replaceable", *v);
+    assert(replaceable && "node {} not replaceable" && *v);
     Node::replacement = v;
   }
 
