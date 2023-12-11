@@ -71,19 +71,20 @@ class Node {
   // 检查此节点是否可以被视为 Target 类型的节点。
   template <typename Target>
   auto is() const -> bool {
-    return is_convertible(Target::nodeId());
+    return is_convertible(Target::node_id());
   }
 
   // 尝试将此节点转换为 Target 类型的节点。
   template <typename Target>
   auto as() -> Target* {
-    return is_convertible(Target::nodeId()) ? static_cast<Target*>(get_actual())
-                                            : nullptr;
+    return is_convertible(Target::node_id())
+               ? static_cast<Target*>(get_actual())
+               : nullptr;
   }
 
   template <typename Target>
   auto as() const -> const Target* {
-    return is_convertible(Target::nodeId())
+    return is_convertible(Target::node_id())
                ? static_cast<const Target*>(get_actual())
                : nullptr;
   }

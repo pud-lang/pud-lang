@@ -407,7 +407,6 @@ class FuncType : public AcceptorExtend<FuncType, Type> {
 // 用于派生从另一个类型派生的类型，如指针或可选类型。
 class DerivedType : public AcceptorExtend<DerivedType, Type> {
  private:
-  /// the base type
   Type* base;
 
  public:
@@ -416,7 +415,6 @@ class DerivedType : public AcceptorExtend<DerivedType, Type> {
   explicit DerivedType(std::string name, Type* base)
       : AcceptorExtend(std::move(name)), base(base) {}
 
-  /// @return the type's base
   auto get_base() const -> Type* { return base; }
 
  private:
@@ -427,13 +425,11 @@ class DerivedType : public AcceptorExtend<DerivedType, Type> {
   }
 };
 
-/// Type of a pointer to another CIR type
+// 指针
 class PointerType : public AcceptorExtend<PointerType, DerivedType> {
  public:
   static const char NodeId;
 
-  /// Constructs a pointer type.
-  /// @param base the type's base
   explicit PointerType(Type* base)
       : AcceptorExtend(get_instance_name(base), base) {}
 
@@ -443,13 +439,11 @@ class PointerType : public AcceptorExtend<PointerType, DerivedType> {
   auto do_is_atomic() const -> bool override { return false; }
 };
 
-/// Type of an optional containing another CIR type
+// 可选值
 class OptionalType : public AcceptorExtend<OptionalType, DerivedType> {
  public:
   static const char NodeId;
 
-  /// Constructs an optional type.
-  /// @param base the type's base
   explicit OptionalType(Type* base)
       : AcceptorExtend(get_instance_name(base), base) {}
 
@@ -459,13 +453,11 @@ class OptionalType : public AcceptorExtend<OptionalType, DerivedType> {
   auto do_is_atomic() const -> bool override { return get_base()->is_atomic(); }
 };
 
-/// Type of a generator yielding another CIR type
+// 生成器
 class GeneratorType : public AcceptorExtend<GeneratorType, DerivedType> {
  public:
   static const char NodeId;
 
-  /// Constructs a generator type.
-  /// @param base the type's base
   explicit GeneratorType(Type* base)
       : AcceptorExtend(get_instance_name(base), base) {}
 
@@ -475,12 +467,12 @@ class GeneratorType : public AcceptorExtend<GeneratorType, DerivedType> {
   auto do_is_atomic() const -> bool override { return false; }
 };
 
-/// Type of a variably sized integer
+// 表示可变大小的整数类型。
 class IntNType : public AcceptorExtend<IntNType, PrimitiveType> {
  private:
-  /// length of the integer
+  // 整数长度
   unsigned len;
-  /// whether the variable is signed
+  // 符号
   bool sign;
 
  public:
@@ -488,18 +480,13 @@ class IntNType : public AcceptorExtend<IntNType, PrimitiveType> {
 
   static const unsigned MAX_LEN = 2048;
 
-  /// Constructs a variably sized integer type.
-  /// @param len the length of the integer
-  /// @param sign true if signed, false otherwise
   IntNType(unsigned len, bool sign)
       : AcceptorExtend(get_instance_name(len, sign)), len(len), sign(sign) {}
 
-  /// @return the length of the integer
   auto get_len() const -> unsigned { return len; }
-  /// @return true if signed
+
   auto is_signed() const -> bool { return sign; }
 
-  /// @return the name of the opposite signed corresponding type
   auto opposite_sign_name() const -> std::string {
     return get_instance_name(len, !sign);
   }
@@ -507,37 +494,33 @@ class IntNType : public AcceptorExtend<IntNType, PrimitiveType> {
   static auto get_instance_name(unsigned len, bool sign) -> std::string;
 };
 
-/// Type of a vector of primitives
+// 表示原始类型的向量
 class VectorType : public AcceptorExtend<VectorType, PrimitiveType> {
  private:
-  /// number of elements
+  // 向量中元素的数量
   unsigned count;
-  /// base type
+  // 基元素类型
   PrimitiveType* base;
 
  public:
   static const char NodeId;
 
-  /// Constructs a vector type.
-  /// @param count the number of elements
-  /// @param base the base type
   VectorType(unsigned count, PrimitiveType* base)
       : AcceptorExtend(get_instance_name(count, base)),
         count(count),
         base(base) {}
 
-  /// @return the count of the vector
   auto get_count() const -> unsigned { return count; }
-  /// @return the base type of the vector
+
   auto get_base() const -> PrimitiveType* { return base; }
 
   static auto get_instance_name(unsigned count, PrimitiveType* base)
       -> std::string;
 };
 
+// 表示多个类型的联合
 class UnionType : public AcceptorExtend<UnionType, Type> {
  private:
-  /// alternative types
   std::vector<Types::Type*> types;
 
  public:
@@ -546,8 +529,6 @@ class UnionType : public AcceptorExtend<UnionType, Type> {
   using const_iterator = std::vector<Types::Type*>::const_iterator;
   using const_reference = std::vector<Types::Type*>::const_reference;
 
-  /// Constructs a UnionType.
-  /// @param types the alternative types (must be sorted by caller)
   explicit UnionType(std::vector<Types::Type*> types)
       : AcceptorExtend(), types(std::move(types)) {}
 
