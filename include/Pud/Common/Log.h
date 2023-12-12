@@ -5,7 +5,6 @@
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
 
-#include <chrono>
 #include <iostream>
 #include <ostream>
 
