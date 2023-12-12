@@ -10,23 +10,34 @@
 #include <string>
 #include <vector>
 
+#include "Pud/AST/Cache.h"
 #include "Pud/Parse/peglib.h"
 
 namespace Pud::Parse {
 
 struct ParseContext {
+  AST::Cache* cache;
   std::stack<int> indent;
   int parens;
   int line_offset, col_offset;
-  ParseContext(int parens = 0, int line_offset = 0,  // NOLINT(*)
+  ParseContext(AST::Cache* cache, int parens = 0, int line_offset = 0,
                int col_offset = 0)
-      : parens(parens), line_offset(line_offset), col_offset(col_offset) {}
+      : cache(cache),
+        parens(parens),
+        line_offset(line_offset),
+        col_offset(col_offset) {}
 
-  bool has_custom_stmt_keyword(const std::string &kwd, bool has_expr) const {
+  auto has_custom_stmt_keyword(const std::string& kwd, bool has_expr) const
+      -> bool {
+    auto i = cache->custom_block_stmts.find(kwd);
+    if (i != cache->custom_block_stmts.end()) {
+      return i->second.first == has_expr;
+    }
     return false;
   }
-  bool has_custom_expr_stmt(const std::string &kwd) const {
-    return false;
+
+  auto has_custom_expr_stmt(const std::string& kwd) const -> bool {
+    return in(cache->custom_expr_stmts, kwd);
   }
 };
 
