@@ -6,8 +6,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Pud/AST/Stmt.h"
 #include "Pud/Type/Class.h"
+#include "Pud/Type/Type.h"
+
+namespace Pud::AST {
+struct FunctionStmt;
+}  // namespace Pud::AST
 
 namespace Pud::Type {
 

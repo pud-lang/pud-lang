@@ -8,16 +8,13 @@
 
 namespace Pud::Parse {
 
-class Parser {
- public:
-  static auto parse_code(const std::string& file, const std::string& code,
-                         int line_offset = 0) -> Pud::AST::StmtPtr;
+auto parse_code(const std::string& file, const std::string& code,
+                int line_offset = 0) -> Pud::AST::StmtPtr;
 
-  static auto parse_expr(const std::string& code, const SourceInfo& offset)
-      -> std::pair<Pud::AST::ExprPtr, std::string>;
+auto parse_expr(const std::string& code, const SourceInfo& offset)
+    -> std::pair<Pud::AST::ExprPtr, std::string>;
 
-  static auto parse_file(const std::string& file) -> Pud::AST::StmtPtr;
-};
+auto parse_file(const std::string& file) -> Pud::AST::StmtPtr;
 
 }  // namespace Pud::Parse
 

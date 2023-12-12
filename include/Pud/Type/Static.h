@@ -7,8 +7,11 @@
 #include <unordered_set>
 #include <vector>
 
-#include "Pud/AST/Expr.h"
 #include "Pud/Type/Class.h"
+
+namespace Pud::AST {
+struct StaticValue;
+}  // namespace Pud::AST
 
 namespace Pud::Type {
 

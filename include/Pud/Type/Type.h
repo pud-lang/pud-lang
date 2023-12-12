@@ -14,6 +14,11 @@
 #define TYPE_PARTIAL "Partial.N"
 #define TYPE_OPTIONAL "Optional"
 
+namespace Pud::AST {
+struct Cache;
+struct Expr;
+}  // namespace Pud::AST
+
 namespace Pud::Type {
 
 struct FuncType;
@@ -34,7 +39,8 @@ struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
   /// 变化，以便以后可以撤销。
   struct Unification {
     // 撤销类型统一步骤。它利用上述列表来恢复原始的类型状态，撤销在unify()方法中所做的所有更改。
-    // 由于 unify 是一个破坏性操作（destructive operation），意味着它会修改类型的状态，因此实现了
+    // 由于 unify 是一个破坏性操作（destructive
+    // operation），意味着它会修改类型的状态，因此实现了
     // 一个机制来允许之后撤销（undo）这些改变。
     void undo();
 
