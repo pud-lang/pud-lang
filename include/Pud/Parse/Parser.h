@@ -3,18 +3,25 @@
 
 #include <string>
 
-#include "Pud/AST/Expr.h"
-#include "Pud/AST/Stmt.h"
+#include "Pud/AST/AST.h"
+#include "Pud/AST/Cache.h"
+#include "Pud/Common/Common.h"
 
 namespace Pud::Parse {
 
-auto parse_code(const std::string& file, const std::string& code,
-                int line_offset = 0) -> Pud::AST::StmtPtr;
+auto parse_code(AST::Cache* cache, const std::string& file,
+                const std::string& code, int line_offset = 0)
+    -> Pud::AST::StmtPtr;
 
-auto parse_expr(const std::string& code, const SourceInfo& offset)
+auto parse_expr(AST::Cache* cache, const std::string& code,
+                const SourceInfo& offset)
     -> std::pair<Pud::AST::ExprPtr, std::string>;
 
-auto parse_file(const std::string& file) -> Pud::AST::StmtPtr;
+auto parse_file(AST::Cache* cache, const std::string& file)
+    -> Pud::AST::StmtPtr;
+
+auto parse_openmp(AST::Cache* cache, const std::string& code,
+                  const SourceInfo& loc) -> std::vector<AST::CallExpr::Arg>;
 
 }  // namespace Pud::Parse
 

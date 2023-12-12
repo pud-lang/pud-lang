@@ -45,5 +45,7 @@ struct ParseContext {
 
 void init_pud_rules(peg::Grammar&);
 void init_pud_actions(peg::Grammar&);
+void init_omp_rules(peg::Grammar&);
+void init_omp_actions(peg::Grammar&);
 
 #endif  // PUD_PARSE_RULES_H
