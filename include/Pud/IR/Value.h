@@ -46,7 +46,7 @@ class Value : public ReplaceableNodeBase<Value>, public IdMixin {
   // 允许替换使用中的类型。
   auto replace_used_type(const std::string& name, Types::Type* new_type)
       -> int final {
-    return get_actual()->do_replace_used_types(name, new_type);
+    return get_actual()->do_replace_used_type(name, new_type);
   }
   using Node::replace_used_type;
 
@@ -134,7 +134,7 @@ class Value : public ReplaceableNodeBase<Value>, public IdMixin {
   virtual auto do_get_used_types() const -> std::vector<Types::Type*> {
     return {};
   }
-  virtual auto do_replace_used_types(const std::string& name,
+  virtual auto do_replace_used_type(const std::string& name,
                                      Types::Type* new_type) -> int {
     return 0;
   }
