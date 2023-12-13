@@ -118,9 +118,17 @@ struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
 
   auto is_static_type() -> char;
 
+ public:
+  static auto make_type(AST::Cache*, const std::string&, const std::string&,
+                        bool = false) -> std::shared_ptr<Type>;
+  static auto make_static(AST::Cache*, const std::shared_ptr<AST::Expr>&)
+      -> std::shared_ptr<StaticType>;
+
  protected:
+  AST::Cache* cache;
+
   explicit Type(const std::shared_ptr<Type>&);
-  explicit Type(const SourceInfo& = SourceInfo());
+  explicit Type(AST::Cache*, const SourceInfo& = SourceInfo());
 };
 
 using TypePtr = std::shared_ptr<Type>;
