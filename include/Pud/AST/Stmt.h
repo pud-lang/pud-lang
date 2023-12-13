@@ -75,6 +75,7 @@ struct SuiteStmt : public Stmt {
 
   explicit SuiteStmt(std::vector<StmtPtr> stmts = {});
 
+  // 可变参数模板构造函数，允许以列表初始化的方式传递多个语句。
   template <typename... Ts>
   SuiteStmt(StmtPtr stmt, Ts... stmts)  // NOLINT(*)
       : stmts({stmt, stmts...}) {}
@@ -187,7 +188,7 @@ struct DelStmt : public Stmt {
 
 struct PrintStmt : public Stmt {
   std::vector<ExprPtr> items;
-  /// 表示print后面是否有悬挂逗号（dangling comma）例如: print a,
+  // 表示print后面是否有悬挂逗号（dangling comma）例如: print a,
   bool is_inline;
 
   explicit PrintStmt(std::vector<ExprPtr> items, bool is_inline);
@@ -253,6 +254,9 @@ struct AssertStmt : public Stmt {
 };
 
 /// 代表一个 while 循环语句 (while cond: suite; else: else_suite)。
+/// @li while True: print
+/// @li while True: break
+///          else: print
 struct WhileStmt : public Stmt {
   // 循环的条件表达式。
   ExprPtr cond;
@@ -260,7 +264,7 @@ struct WhileStmt : public Stmt {
   StmtPtr suite;
   // 循环结束后执行的 else 语句块（如果有）。
   StmtPtr else_suite;
-  // 用于模拟 goto 语句的变量名：`while gotoVar: ...`。
+  // 用于模拟 goto 语句的变量名：`while goto_var: ...`。
   std::string goto_var = "";
 
   WhileStmt(ExprPtr cond, StmtPtr suite, StmtPtr else_suite = nullptr);

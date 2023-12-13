@@ -22,6 +22,8 @@ auto Stmt::to_string() const -> std::string { return to_string(-1); }
 void Stmt::validate() const {}
 
 SuiteStmt::SuiteStmt(std::vector<StmtPtr> stmts) {
+  // 接受一个语句指针的向量并对其进行展平处理。
+  // 这是为了处理嵌套的 SuiteStmt。
   for (auto& s : stmts) {
     flatten(s, this->stmts);
   }
@@ -44,6 +46,8 @@ auto SuiteStmt::to_string(int indent) const -> std::string {
   return fmt::format("(suite{})", s.empty() ? s : " " + pad + s);
 }
 auto SuiteStmt::clone() const -> StmtPtr {
+  // 创建当前 SuiteStmt 对象的深拷贝。
+  // 这在AST的变换过程中非常有用，因为它允许修改拷贝而不影响原始对象。
   return std::make_shared<SuiteStmt>(*this);
 }
 void SuiteStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
@@ -60,6 +64,10 @@ void SuiteStmt::flatten(const StmtPtr& s, std::vector<StmtPtr>& stmts) {
   }
 }
 auto SuiteStmt::last_in_block() -> StmtPtr* {
+  // 返回最后一个语句的引用。
+  // 如果最后一个语句是 SuiteStmt，则递归地调用 last_in_block 来找到真正
+  // 的最后一个语句。这对于理解代码块的结尾很重要，特别是在需要处理返回
+  // 语句或类似结构时。
   if (stmts.empty()) {
     return nullptr;
   }
