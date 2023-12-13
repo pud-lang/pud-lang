@@ -6,9 +6,7 @@
 #include <vector>
 
 #include "Pud/AST/ASTVisitor.h"
-#include "Pud/Common/Clone.h"
-#include "Pud/Common/Error.h"
-#include "Pud/Common/Str.h"
+#include "Pud/Common/Common.h"
 
 namespace Pud::AST {
 
