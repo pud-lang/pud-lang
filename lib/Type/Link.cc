@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "Pud/AST/Expr.h"
 #include "Pud/Common/Error.h"
 #include "Pud/Type/Static.h"
 #include "Pud/Type/Type.h"

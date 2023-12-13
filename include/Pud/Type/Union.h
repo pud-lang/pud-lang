@@ -11,7 +11,7 @@
 namespace Pud::Type {
 
 struct UnionType : public RecordType {
-  std::vector<TypePtr> pendingTypes;
+  std::vector<TypePtr> pending_types;
 
   explicit UnionType();
   UnionType(const std::vector<ClassType::Generic>&,
