@@ -1,6 +1,7 @@
 #include <any>
 
 #include "Pud/Parse/Rules.h"
+
 using namespace std;
 using namespace Pud;
 using namespace Pud::AST;
@@ -23,34 +24,17 @@ void init_omp_rules(peg::Grammar& grammar) {
   ~grammar["SPACE"] <= oom(cls(vc{{0x20, 0x20}, {0x9, 0x9}}));
   grammar["SPACE"].name = "SPACE";
 
-  // schedule_kind <- ("static" / "dynamic" / "guided" / "auto" / "runtime") {
-  //   return VS.token_to_string();
-  // }
+  // schedule_kind <- ("static" / "dynamic" / "guided" / "auto" / "runtime")
   grammar["schedule_kind"] <= cho(lit("static"), lit("dynamic"), lit("guided"),
                                   lit("auto"), lit("runtime"));
   grammar["schedule_kind"].name = "schedule_kind";
 
   // clause <-
-  //   / "schedule" _ "(" _ schedule_kind (_ "," _ int)? _ ")" {
-  //     vector<CallExpr::Arg> v{{"schedule",
-  //     make_shared<StringExpr>(ac<string>(V0))}}; if (VS.size() > 1)
-  //       v.push_back({"chunk_size", make_shared<IntExpr>(ac<int>(V1))});
-  //     return v;
-  //   }
-  //   / "num_threads" _ "(" _ int _ ")" {
-  //     return vector<CallExpr::Arg>{{"num_threads",
-  //     make_shared<IntExpr>(ac<int>(V0))}};
-  //   }
-  //   / "ordered" {
-  //     return vector<CallExpr::Arg>{{"ordered", make_shared<BoolExpr>(true)}};
-  //   }
-  //   / "collapse" {
-  //     return vector<CallExpr::Arg>{{"collapse",
-  //     make_shared<IntExpr>(ac<int>(V0))}};
-  //   }
-  //   / "gpu" {
-  //     return vector<CallExpr::Arg>{{"gpu", make_shared<BoolExpr>(true)}};
-  //   }
+  //   / "schedule" _ "(" _ schedule_kind (_ "," _ int)? _ ")"
+  //   / "num_threads" _ "(" _ int _ ")"
+  //   / "ordered"
+  //   / "collapse"
+  //   / "gpu"
   grammar["clause"] <= cho(seq(lit("schedule"), ref(grammar, "_"), lit("("),
                                ref(grammar, "_"), ref(grammar, "schedule_kind"),
                                opt(seq(ref(grammar, "_"), lit(","),
@@ -62,22 +46,13 @@ void init_omp_rules(peg::Grammar& grammar) {
                            lit("ordered"), lit("collapse"), lit("gpu"));
   grammar["clause"].name = "clause";
 
-  // pragma <- "omp"? _ "parallel"? _ (clause _)* {
-  //   vector<CallExpr::Arg> v;
-  //   for (auto &i: VS) {
-  //     auto vi = ac<vector<CallExpr::Arg>>(i);
-  //     v.insert(v.end(), vi.begin(), vi.end());
-  //   }
-  //   return v;
-  // }
+  // pragma <- "omp"? _ "parallel"? _ (clause _)*
   grammar["pragma"] <= seq(opt(lit("omp")), ref(grammar, "_"),
                            opt(lit("parallel")), ref(grammar, "_"),
                            zom(seq(ref(grammar, "clause"), ref(grammar, "_"))));
   grammar["pragma"].name = "pragma";
 
-  // int <- [1-9] [0-9]* {
-  //   return stoi(VS.token_to_string());
-  // }
+  // int <- [1-9] [0-9]*
   grammar["int"] <= seq(cls(vc{{0x31, 0x39}}), zom(cls(vc{{0x30, 0x39}})));
   grammar["int"].name = "int";
   ~grammar["%recover"] <= ref(grammar, "x");
