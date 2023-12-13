@@ -15,25 +15,23 @@ struct StaticValue;
 
 namespace Pud::Type {
 
-/**
- * A static integer type (e.g. N in def foo[N: int]). Usually an integer, but
- * can point to a static expression.
- */
+// 代表一个静态整数类型。
+// 这通常是用于编译时计算的类型，如模板或泛型编程中的整数类型参数。
+// (e.g. N in def foo[N: int])
 struct StaticType : public Type {
-  /// List of static variables that a type depends on
-  /// (e.g. for A+B+2, generics are {A, B}).
+  // 存储静态类型依赖的静态变量列表。
+  // 例如，对于表达式 A+B+2，generics 是 {A, B}。
   std::vector<ClassType::Generic> generics;
-  /// A static expression that needs to be evaluated.
-  /// Can be nullptr if there is no expression.
+  // 用于存储需要求值的静态表达式。如果没有表达式，则可以为 nullptr。
   std::shared_ptr<AST::Expr> expr;
 
-  StaticType(std::vector<ClassType::Generic> generics,
+  StaticType(AST::Cache* cache, std::vector<ClassType::Generic> generics,
              const std::shared_ptr<AST::Expr>& expr);
-  /// Convenience function that parses expr and populates static type generics.
-  StaticType(const std::shared_ptr<AST::Expr>& expr);
-  /// Convenience function for static types whose evaluation is already known.
-  explicit StaticType(int64_t i);
-  explicit StaticType(const std::string& s);
+  // 一个只接受表达式的便利构造函数，它解析表达式并填充静态类型的 generics。
+  StaticType(AST::Cache* cache, const std::shared_ptr<AST::Expr>& expr);
+  // 一个接受已知求值结果（整数 i 或字符串 s）的构造函数。
+  explicit StaticType(AST::Cache* cache, int64_t i);
+  explicit StaticType(AST::Cache* cache, const std::string& s);
 
  public:
   auto unify(Type* typ, Unification* undo) -> int override;

@@ -11,10 +11,11 @@
 
 namespace Pud::Type {
 
-ClassType::ClassType(std::string name, std::string nice_name,
+ClassType::ClassType(AST::Cache* cache, std::string name, std::string nice_name,
                      std::vector<Generic> generics,
                      std::vector<Generic> hidden_generics)
-    : name(std::move(name)),
+    : Type(cache),
+      name(std::move(name)),
       nice_name(std::move(nice_name)),
       generics(std::move(generics)),
       hidden_generics(std::move(hidden_generics)) {}
@@ -87,7 +88,7 @@ auto ClassType::generalize(int at_level) -> TypePtr {
   for (auto& t : hg) {
     t.type = t.type ? t.type->generalize(at_level) : nullptr;
   }
-  auto c = std::make_shared<ClassType>(name, nice_name, g, hg);
+  auto c = std::make_shared<ClassType>(cache, name, nice_name, g, hg);
   c->set_source_info(get_source_info());
   return c;
 }
@@ -105,7 +106,7 @@ auto ClassType::instantiate(int at_level, int* unbound_count,
     t.type =
         t.type ? t.type->instantiate(at_level, unbound_count, cache) : nullptr;
   }
-  auto c = std::make_shared<ClassType>(name, nice_name, g, hg);
+  auto c = std::make_shared<ClassType>(this->cache, name, nice_name, g, hg);
   c->set_source_info(get_source_info());
   return c;
 }
@@ -150,11 +151,12 @@ auto ClassType::realized_name() const -> std::string { return ""; }
 
 auto ClassType::realized_type_name() const -> std::string { return ""; }
 
-RecordType::RecordType(std::string name, std::string nice_name,
-                       std::vector<Generic> generics, std::vector<TypePtr> args,
-                       bool no_tuple,
+RecordType::RecordType(AST::Cache* cache, std::string name,
+                       std::string nice_name, std::vector<Generic> generics,
+                       std::vector<TypePtr> args, bool no_tuple,
                        const std::shared_ptr<StaticType>& repeats)
-    : ClassType(std::move(name), std::move(nice_name), std::move(generics)),
+    : ClassType(cache, std::move(name), std::move(nice_name),
+                std::move(generics)),
       args(std::move(args)),
       no_tuple(false),
       repeats(repeats) {}

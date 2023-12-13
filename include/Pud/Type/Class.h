@@ -39,7 +39,7 @@ struct ClassType : public Type {
 
   std::string _rn;
 
-  explicit ClassType(std::string name, std::string nice_name,
+  explicit ClassType(AST::Cache* cache, std::string name, std::string nice_name,
                      std::vector<Generic> generics = {},
                      std::vector<Generic> hidden_generics = {});
   explicit ClassType(const std::shared_ptr<ClassType>& base);
@@ -80,7 +80,7 @@ struct RecordType : public ClassType {
   // 表示元组的重复类型（如果有的话）。
   std::shared_ptr<StaticType> repeats = nullptr;
 
-  explicit RecordType(std::string name, std::string nice_name,
+  explicit RecordType(AST::Cache* cache, std::string name, std::string nice_name,
                       std::vector<ClassType::Generic> generics =
                           std::vector<ClassType::Generic>(),
                       std::vector<TypePtr> args = std::vector<TypePtr>(),
