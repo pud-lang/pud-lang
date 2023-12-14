@@ -15,18 +15,13 @@ struct FunctionStmt;
 
 namespace Pud::Type {
 
-/**
- * A generic type that represents a Seq function instantiation.
- * It inherits RecordType that realizes Callable[...].
- *
- * ⚠️ This is not a function pointer (Function[...]) type.
- */
+// FuncType 不是一个函数指针类型，而是具体表示一个函数的类型。
 struct FuncType : public RecordType {
-  /// Canonical AST node.
+  // 指向AST（抽象语法树）中的 FunctionStmt 结构体，表示函数的代码结构。
   AST::FunctionStmt* ast;
-  /// Function generics (e.g. T in def foo[T](...)).
+  // 函数泛型参数列表。例如，def foo[T](...) 中的 T。
   std::vector<ClassType::Generic> func_generics;
-  /// Enclosing class or a function.
+  // 表示函数的上下文，可能是一个类或者另一个函数。
   TypePtr func_parent;
 
  public:
@@ -60,18 +55,11 @@ struct FuncType : public RecordType {
 };
 using FuncTypePtr = std::shared_ptr<FuncType>;
 
-/**
- * A generic type that represents a partial Seq function instantiation.
- * It inherits RecordType that realizes Tuple[...].
- *
- * Note: partials only work on Seq functions. Function pointer partials
- *       will become a partials of Function.__call__ Seq function.
- */
+// 代表一个部分实例化的函数。它实现了元组类型。
 struct PartialType : public RecordType {
-  /// Seq function that is being partialized. Always generic (not instantiated).
+  // 指向部分实例化的函数。这是一个泛型函数，还未完全实例化。
   FuncTypePtr func;
-  /// Arguments that are already provided (1 for known argument, 0 for
-  /// expecting).
+  // 指示哪些参数已经提供的标记数组。如果参数已知，则对应位置为1，否则为0。
   std::vector<char> known;
 
  public:

@@ -8,6 +8,7 @@
 #include "Pud/Common/Error.h"
 #include "Pud/Type/Link.h"
 #include "Pud/Type/Static.h"
+#include "Pud/TypeCheck/TypeCheck.h"
 
 namespace Pud::Type {
 
