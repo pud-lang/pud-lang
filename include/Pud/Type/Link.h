@@ -12,7 +12,7 @@ struct LinkType : public Type {
   // 未绑定（Unbound）、泛型（Generic）或链接（Link）。
   enum Kind : uint8_t { Unbound, Generic, Link };
 
-  LinkType(Kind kind, int id, int level = 0, TypePtr type = nullptr,
+  LinkType(AST::Cache *cache, Kind kind, int id, int level = 0, TypePtr type = nullptr,
            char is_static = 0, std::shared_ptr<Trait> trait = nullptr,
            TypePtr default_type = nullptr, std::string generic_name = "");
 

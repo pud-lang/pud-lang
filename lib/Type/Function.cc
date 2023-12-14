@@ -116,7 +116,6 @@ auto FuncType::get_unbounds() const -> std::vector<TypePtr> {
     auto tu = func_parent->get_unbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
   }
-  // Important: return type unbounds are not important, so skip them.
   for (auto& a : get_arg_types()) {
     auto tu = a->get_unbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
@@ -146,10 +145,10 @@ auto FuncType::realized_type_name() const -> std::string {
 
 auto FuncType::is_instantiated() const -> bool {
   TypePtr removed = nullptr;
-  auto retType = get_ret_type();
-  if (retType->get_func() && retType->get_func()->func_parent.get() == this) {
-    removed = retType->get_func()->func_parent;
-    retType->get_func()->func_parent = nullptr;
+  auto ret_type = get_ret_type();
+  if (ret_type->get_func() && ret_type->get_func()->func_parent.get() == this) {
+    removed = ret_type->get_func()->func_parent;
+    ret_type->get_func()->func_parent = nullptr;
   }
   auto res = std::all_of(func_generics.begin(), func_generics.end(),
                          [](auto& a) {
@@ -158,7 +157,7 @@ auto FuncType::is_instantiated() const -> bool {
              (!func_parent || func_parent->is_instantiated()) &&
              this->RecordType::is_instantiated();
   if (removed)
-    retType->get_func()->func_parent = removed;
+    ret_type->get_func()->func_parent = removed;
   return res;
 }
 
@@ -204,10 +203,10 @@ auto FuncType::realized_name() const -> std::string {
                      ast->name, s.empty() ? "" : fmt::format("[{}]", s));
 }
 
-PartialType::PartialType(const std::shared_ptr<RecordType>& baseType,
+PartialType::PartialType(const std::shared_ptr<RecordType>& base_type,
                          std::shared_ptr<FuncType> func,
                          std::vector<char> known)
-    : RecordType(*baseType), func(std::move(func)), known(std::move(known)) {}
+    : RecordType(*base_type), func(std::move(func)), known(std::move(known)) {}
 
 auto PartialType::unify(Type* typ, Unification* us) -> int {
   return this->RecordType::unify(typ, us);

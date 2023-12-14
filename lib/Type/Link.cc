@@ -7,13 +7,15 @@
 #include "Pud/Common/Error.h"
 #include "Pud/Type/Static.h"
 #include "Pud/Type/Type.h"
+#include "Pud/TypeCheck/TypeCheck.h"
 
 namespace Pud::Type {
 
-LinkType::LinkType(Kind kind, int id, int level, TypePtr type, char is_static,
-                   std::shared_ptr<Trait> trait, TypePtr default_type,
-                   std::string generic_name)
-    : kind(kind),
+LinkType::LinkType(AST::Cache* cache, Kind kind, int id, int level,
+                   TypePtr type, char is_static, std::shared_ptr<Trait> trait,
+                   TypePtr default_type, std::string generic_name)
+    : Type(cache),
+      kind(kind),
       id(id),
       level(level),
       type(std::move(type)),
@@ -126,7 +128,7 @@ auto LinkType::generalize(int at_level) -> TypePtr {
   } else if (kind == Kind::Unbound) {
     if (level >= at_level) {
       return std::make_shared<LinkType>(
-          Kind::Generic, id, 0, nullptr, is_static,
+          cache, Kind::Generic, id, 0, nullptr, is_static,
           trait ? std::static_pointer_cast<Trait>(trait->generalize(at_level))
                 : nullptr,
           default_type ? default_type->generalize(at_level) : nullptr,
@@ -147,16 +149,19 @@ auto LinkType::instantiate(int at_level, int* unbound_count,
     // GenericClass[int]，那么再次请求同样的实例化应返回相同的对象。
     // 缓存机制提高了效率，避免了重复工作，并保证了类型的一致性。
 
-    // TODO: 增加缓存。
+    if (cache && cache->find(id) != cache->end())
+      return (*cache)[id];
     auto t = std::make_shared<LinkType>(
-        Kind::Unbound, unbound_count ? (*unbound_count)++ : id, at_level,
-        nullptr, is_static,
+        this->cache, Kind::Unbound, unbound_count ? (*unbound_count)++ : id,
+        at_level, nullptr, is_static,
         trait ? std::static_pointer_cast<Trait>(
                     trait->instantiate(at_level, unbound_count, cache))
               : nullptr,
         default_type ? default_type->instantiate(at_level, unbound_count, cache)
                      : nullptr,
         generic_name);
+    if (cache)
+      (*cache)[id] = t;
     return t;
   } else if (kind == Kind::Unbound) {
     // 在实例化过程中，未绑定的类型表示它仍然是开放的。
@@ -264,6 +269,21 @@ auto LinkType::occurs(Type* typ, Type::Unification* undo) -> bool {
     } else {
       return false;
     }
+  } else if (auto ts = typ->get_static()) {
+    for (auto &g : ts->generics)
+      if (g.type && occurs(g.type.get(), undo))
+        return true;
+    return false;
+  }
+  if (auto tc = typ->get_class()) {
+    for (auto &g : tc->generics)
+      if (g.type && occurs(g.type.get(), undo))
+        return true;
+    if (auto tr = typ->get_record())
+      for (auto &t : tr->args)
+        if (occurs(t.get(), undo))
+          return true;
+    return false;
   } else {
     return false;
   }
