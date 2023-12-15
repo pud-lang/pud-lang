@@ -12,13 +12,13 @@ struct Trait : public Type {
   auto realized_name() const -> std::string override;
 
  protected:
-  explicit Trait() = default;
+  explicit Trait(AST::Cache *);
   explicit Trait(const std::shared_ptr<Type>&);
 };
 
 /// 代表可调用的类型特征，如函数类型。
 struct CallableTrait : public Trait {
-  explicit CallableTrait(std::vector<TypePtr> args);
+  explicit CallableTrait(AST::Cache *cache, std::vector<TypePtr> args);
   auto unify(Type* typ, Unification* undo) -> int override;
   auto generalize(int at_level) -> TypePtr override;
   auto instantiate(int at_level, int* unbound_count,
