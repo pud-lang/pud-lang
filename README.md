@@ -4,7 +4,7 @@
 
 [x] 2. ast
 
-[ ] 3. ast type define
+[x] 3. ast type define
 
 [ ] 4. ast simplify
 
