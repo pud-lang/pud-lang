@@ -215,7 +215,8 @@ auto SimplifyVisitor::transform_assignment(ExprPtr lhs, ExprPtr rhs,
   return assign;
 }
 
-/// 将复杂的赋值表达式（例如解构赋值）分解为更简单的赋值表达式。
+/// 用于将复杂的赋值表达式（如 Python 风格的多元赋值或解构赋值）分解成一系列
+/// 简单的赋值表达式。
 /// (e.g., `a = b`, `a.x = b`, or `a[x] = b`).
 /// @example
 ///   `(a, b) = c`     -> `a = c[0]; b = c[1]`
@@ -230,11 +231,13 @@ void SimplifyVisitor::unpack_assignments(const ExprPtr& lhs, ExprPtr rhs,
   std::vector<ExprPtr> left_side;
   if (auto et = lhs->get_tuple()) {
     // 如果 lhs 是元组（例如 (a, b)），将其元素添加到 left_side。
+    // 为了后续处理每个元素的赋值。
     // Case: (a, b) = ...
     for (auto& i : et->items)
       left_side.push_back(i);
   } else if (auto el = lhs->get_list()) {
     // 如果 lhs 是列表（例如 [a, b]），也将其元素添加到 left_side。
+    // 为了后续处理每个元素的赋值。
     // Case: [a, b] = ...
     for (auto& i : el->items)
       left_side.push_back(i);
@@ -257,6 +260,7 @@ void SimplifyVisitor::unpack_assignments(const ExprPtr& lhs, ExprPtr rhs,
     rhs = new_rhs;
   }
 
+  // 处理解构赋值:
   // 遍历 left_side 中的每个元素，直到遇到带 * 的表达式（如果有的话）。
   // 对于每个元素，创建一个索引表达式（例如 rhs[st]），然后递归调
   // 用 unpack_assignments。
@@ -286,6 +290,7 @@ void SimplifyVisitor::unpack_assignments(const ExprPtr& lhs, ExprPtr rhs,
     st += 1;
     // 对于之后的元素，使用负索引（例如 rhs[-1]）来访问 rhs 的剩余部分。
     for (; st < left_side.size(); st++) {
+      // 如果再次遇到 StarExpr，则报告错误，因为 Python 语法不允许多个 *。
       if (left_side[st]->get_star())
         Err(Error::ASSIGN_MULTI_STAR, left_side[st]);
       right_side =
