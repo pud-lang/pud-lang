@@ -189,7 +189,7 @@ auto SimplifyVisitor::check_capture(const SimplifyContext::Item& val) -> bool {
   if (val->is_var() && val->get_base_name().empty() && val->scope.size() == 1) {
     val->no_shadow = true;
     if (!val->is_static())
-      ctx->cache->addGlobal(val->canonical_name);
+      ctx->cache->add_global(val->canonical_name);
     return false;
   }
 

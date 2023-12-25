@@ -33,14 +33,11 @@
 #define MAX_REALIZATION_DEPTH 200
 #define MAX_STATIC_ITER 1024
 
-namespace Pud::Type {
-struct TypeContext;
-}
-
 namespace Pud::AST {
 
 struct SimplifyContext;
 class SimplifyVisitor;
+struct TypeContext;
 struct TranslateContext;
 
 // Cache 结构体在编译器设计中的作用是管理和维护在编译过程中的各种数据结构，
@@ -201,7 +198,7 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   std::unordered_map<std::string, std::vector<Overload>> overloads;
 
   // 用于IR API访问的上下文。
-  std::shared_ptr<Type::TypeContext> type_ctx;
+  std::shared_ptr<TypeContext> type_ctx;
   std::shared_ptr<TranslateContext> codegen_ctx;
   // 用于存储即将转换为IR的函数实现和部分记录名。
   std::set<std::pair<std::string, std::string>> pending_realizations;

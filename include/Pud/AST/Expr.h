@@ -699,7 +699,7 @@ struct InstantiateExpr : Expr {
   void accept(ASTVisitor& visitor) override;
 };
 
-enum class ExprAttr : uint8_t {
+enum ExprAttr : uint8_t {
   SequenceItem,
   StarSequenceItem,
   List,
