@@ -13,7 +13,7 @@
 #include "Pud/AST/Context.h"
 #include "Pud/Common/Common.h"
 
-namespace Pud::Type {
+namespace Pud::AST {
 
 // 用于表示类型检查过程中的一个标识符项。
 struct TypecheckItem {

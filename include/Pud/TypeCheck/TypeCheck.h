@@ -14,7 +14,7 @@
 #include "Pud/Format/Format.h"
 #include "Pud/TypeCheck/Context.h"
 
-namespace Pud::Type {
+namespace Pud::AST {
 
 // 用于推断表达式类型并执行类型引导转换的访问者类。
 class TypecheckVisitor
