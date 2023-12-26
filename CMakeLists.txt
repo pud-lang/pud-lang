@@ -32,10 +32,10 @@ endif()
 #------------------------------------------------------------
 
 # apt install llvm-15-dev libclang-15-dev
-# set(LLVM_DIR /usr/lib/llvm-15/lib/cmake/llvm)
+set(LLVM_DIR /usr/lib/llvm-15/lib/cmake/llvm)
 # set(Clang_DIR /usr/lib/llvm-15/lib/cmake/clang)
 # manually install
-set(LLVM_DIR /usr/local/lib/cmake/llvm)
+# set(LLVM_DIR /usr/local/lib/cmake/llvm)
 #set(Clang_DIR /usr/local/lib/cmake/clang)
 
 find_package(LLVM REQUIRED CONFIG)
