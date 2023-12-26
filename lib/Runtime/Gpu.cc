@@ -35,19 +35,19 @@ void pud_nvptx_init() {
   check(cuCtxCreate(&context, 0, device));
 }
 
-SEQ_FUNC void pud_nvptx_load_module(const char* filename) {
+PUD_FUNC void pud_nvptx_load_module(const char* filename) {
   CUmodule module;
   check(cuModuleLoad(&module, filename));
   modules.push_back(module);
 }
 
-SEQ_FUNC pud_int_t pud_nvptx_device_count() {
+PUD_FUNC pud_int_t pud_nvptx_device_count() {
   int devCount;
   check(cuDeviceGetCount(&devCount));
   return devCount;
 }
 
-SEQ_FUNC pud_str_t pud_nvptx_device_name(CUdevice device) {
+PUD_FUNC pud_str_t pud_nvptx_device_name(CUdevice device) {
   char name[128];
   check(cuDeviceGetName(name, sizeof(name) - 1, device));
   auto sz = static_cast<pud_int_t>(strlen(name));
@@ -56,13 +56,13 @@ SEQ_FUNC pud_str_t pud_nvptx_device_name(CUdevice device) {
   return {sz, p};
 }
 
-SEQ_FUNC pud_int_t pud_nvptx_device_capability(CUdevice device) {
+PUD_FUNC pud_int_t pud_nvptx_device_capability(CUdevice device) {
   int devMajor, devMinor;
   check(cuDeviceComputeCapability(&devMajor, &devMinor, device));
   return ((pud_int_t)devMajor << 32) | (pud_int_t)devMinor;
 }
 
-SEQ_FUNC CUdevice pud_nvptx_device(pud_int_t idx) {
+PUD_FUNC CUdevice pud_nvptx_device(pud_int_t idx) {
   CUdevice device;
   check(cuDeviceGet(&device, idx));
   return device;
@@ -75,7 +75,7 @@ static bool name_char_valid(char c, bool first) {
   return ok;
 }
 
-SEQ_FUNC CUfunction pud_nvptx_function(pud_str_t name) {
+PUD_FUNC CUfunction pud_nvptx_function(pud_str_t name) {
   CUfunction function;
   CUresult result;
 
@@ -101,7 +101,7 @@ SEQ_FUNC CUfunction pud_nvptx_function(pud_str_t name) {
   return {};
 }
 
-SEQ_FUNC void pud_nvptx_invoke(CUfunction f, unsigned int gridDimX,
+PUD_FUNC void pud_nvptx_invoke(CUfunction f, unsigned int gridDimX,
                                unsigned int gridDimY, unsigned int gridDimZ,
                                unsigned int blockDimX, unsigned int blockDimY,
                                unsigned int blockDimZ,
@@ -112,7 +112,7 @@ SEQ_FUNC void pud_nvptx_invoke(CUfunction f, unsigned int gridDimX,
                        nullptr));
 }
 
-SEQ_FUNC CUdeviceptr pud_nvptx_device_alloc(pud_int_t size) {
+PUD_FUNC CUdeviceptr pud_nvptx_device_alloc(pud_int_t size) {
   if (size == 0)
     return {};
 
@@ -121,21 +121,21 @@ SEQ_FUNC CUdeviceptr pud_nvptx_device_alloc(pud_int_t size) {
   return devp;
 }
 
-SEQ_FUNC void pud_nvptx_memcpy_h2d(CUdeviceptr devp, char* hostp,
+PUD_FUNC void pud_nvptx_memcpy_h2d(CUdeviceptr devp, char* hostp,
                                    pud_int_t size) {
   if (size)
     check(cuMemcpyHtoD(devp, hostp, size));
 }
 
-SEQ_FUNC void pud_nvptx_memcpy_d2h(char* hostp, CUdeviceptr devp,
+PUD_FUNC void pud_nvptx_memcpy_d2h(char* hostp, CUdeviceptr devp,
                                    pud_int_t size) {
   if (size)
     check(cuMemcpyDtoH(hostp, devp, size));
 }
 
-SEQ_FUNC void pud_nvptx_device_free(CUdeviceptr devp) {
+PUD_FUNC void pud_nvptx_device_free(CUdeviceptr devp) {
   if (devp)
     check(cuMemFree(devp));
 }
 
-#endif /* CODON_GPU */
+#endif /* PUD_GPU */
