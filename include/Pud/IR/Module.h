@@ -227,8 +227,8 @@ class Module : public AcceptorExtend<Module, Node> {
   template <typename DesiredType, typename... Args>
   auto N(Pud::SourceInfo s, Args&&... args) -> DesiredType* {
     auto* ret = new DesiredType(std::forward<Args>(args)...);
-    ret->setModule(this);
-    ret->setSrcInfo(s);
+    ret->set_module(this);
+    ret->set_source_info(s);
 
     store(ret);
     return ret;

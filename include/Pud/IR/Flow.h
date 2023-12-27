@@ -107,13 +107,13 @@ class ForFlow : public AcceptorExtend<ForFlow, Flow> {
   // 循环中使用的变量。
   Var* var;
   // 并行循环调度信息（可选）。
-  std::unique_ptr<Transform::Parallel::Schedule> schedule;
+  std::unique_ptr<Transform::Parallel::OMPSched> schedule;
 
  public:
   static const char NodeId;
 
   ForFlow(Value* iter, Flow* body, Var* var,
-          std::unique_ptr<Transform::Parallel::Schedule> schedule = {},
+          std::unique_ptr<Transform::Parallel::OMPSched> schedule = {},
           std::string name = "")
       : AcceptorExtend(std::move(name)),
         iter(iter),
@@ -137,19 +137,19 @@ class ForFlow : public AcceptorExtend<ForFlow, Flow> {
 
   void set_parallel(bool a = true) {
     if (a) {
-      schedule = std::make_unique<Transform::Parallel::Schedule>();
+      schedule = std::make_unique<Transform::Parallel::OMPSched>();
     } else {
-      schedule = std::unique_ptr<Transform::Parallel::Schedule>();
+      schedule = std::unique_ptr<Transform::Parallel::OMPSched>();
     }
   }
 
-  auto get_schedule() -> Transform::Parallel::Schedule* {
+  auto get_schedule() -> Transform::Parallel::OMPSched* {
     return schedule.get();
   }
-  auto get_schedule() const -> const Transform::Parallel::Schedule* {
+  auto get_schedule() const -> const Transform::Parallel::OMPSched* {
     return schedule.get();
   }
-  void set_schedule(std::unique_ptr<Transform::Parallel::Schedule> s) {
+  void set_schedule(std::unique_ptr<Transform::Parallel::OMPSched> s) {
     schedule = std::move(s);
   }
 
@@ -177,14 +177,14 @@ class ImperativeForFlow : public AcceptorExtend<ImperativeForFlow, Flow> {
   // 循环中使用的变量
   Var* var;
   // 并行循环调度信息（可选）。
-  std::unique_ptr<Transform::Parallel::Schedule> schedule;
+  std::unique_ptr<Transform::Parallel::OMPSched> schedule;
 
  public:
   static const char NodeId;
 
   ImperativeForFlow(
       Value* start, int64_t step, Value* end, Flow* body, Var* var,
-      std::unique_ptr<Transform::Parallel::Schedule> schedule = {},
+      std::unique_ptr<Transform::Parallel::OMPSched> schedule = {},
       std::string name = "")
       : AcceptorExtend(std::move(name)),
         start(start),
@@ -215,19 +215,19 @@ class ImperativeForFlow : public AcceptorExtend<ImperativeForFlow, Flow> {
 
   void set_parallel(bool a = true) {
     if (a) {
-      schedule = std::make_unique<Transform::Parallel::Schedule>();
+      schedule = std::make_unique<Transform::Parallel::OMPSched>();
     } else {
-      schedule = std::unique_ptr<Transform::Parallel::Schedule>();
+      schedule = std::unique_ptr<Transform::Parallel::OMPSched>();
     }
   }
 
-  auto get_schedule() -> Transform::Parallel::Schedule* {
+  auto get_schedule() -> Transform::Parallel::OMPSched* {
     return schedule.get();
   }
-  auto get_schedule() const -> const Transform::Parallel::Schedule* {
+  auto get_schedule() const -> const Transform::Parallel::OMPSched* {
     return schedule.get();
   }
-  void set_schedule(std::unique_ptr<Transform::Parallel::Schedule> s) {
+  void set_schedule(std::unique_ptr<Transform::Parallel::OMPSched> s) {
     schedule = std::move(s);
   }
 

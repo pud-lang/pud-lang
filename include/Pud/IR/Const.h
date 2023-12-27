@@ -39,9 +39,9 @@ class TemplatedConst : public AcceptorExtend<TemplatedConst<ValueType>, Const> {
  public:
   static const char NodeId;
 
-  using AcceptorExtend<TemplatedConst<ValueType>, Const>::getModule;
-  using AcceptorExtend<TemplatedConst<ValueType>, Const>::getSrcInfo;
-  using AcceptorExtend<TemplatedConst<ValueType>, Const>::getType;
+  using AcceptorExtend<TemplatedConst<ValueType>, Const>::get_module;
+  using AcceptorExtend<TemplatedConst<ValueType>, Const>::get_source_info;
+  using AcceptorExtend<TemplatedConst<ValueType>, Const>::get_type;
 
   TemplatedConst(ValueType v, Types::Type* type, std::string name = "")
       : AcceptorExtend<TemplatedConst<ValueType>, Const>(type, std::move(name)),

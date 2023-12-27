@@ -11,49 +11,49 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
-#define DBG(c, ...)                                                          \
-  fmt::print(Pud::getLogger().log, "{}" c "\n",                            \
-             std::string(size_t(2) * size_t(Pud::getLogger().level), ' '), \
+#define DBG(c, ...)                                                         \
+  fmt::print(Pud::get_logger().log, "{}" c "\n",                            \
+             std::string(size_t(2) * size_t(Pud::get_logger().level), ' '), \
              ##__VA_ARGS__)
 #define LOG(c, ...) DBG(c, ##__VA_ARGS__)
-#define LOG_TIME(c, ...)                                     \
+#define LOG_TIME(c, ...)                                  \
+  {                                                       \
+    if (Pud::get_logger().flags & Pud::Logger::FLAG_TIME) \
+      DBG(c, ##__VA_ARGS__);                              \
+  }
+#define LOG_REALIZE(c, ...)                                  \
   {                                                          \
-    if (Pud::getLogger().flags & Pud::Logger::FLAG_TIME) \
+    if (Pud::get_logger().flags & Pud::Logger::FLAG_REALIZE) \
       DBG(c, ##__VA_ARGS__);                                 \
   }
-#define LOG_REALIZE(c, ...)                                     \
-  {                                                             \
-    if (Pud::getLogger().flags & Pud::Logger::FLAG_REALIZE) \
-      DBG(c, ##__VA_ARGS__);                                    \
+#define LOG_TYPECHECK(c, ...)                                  \
+  {                                                            \
+    if (Pud::get_logger().flags & Pud::Logger::FLAG_TYPECHECK) \
+      DBG(c, ##__VA_ARGS__);                                   \
   }
-#define LOG_TYPECHECK(c, ...)                                     \
-  {                                                               \
-    if (Pud::getLogger().flags & Pud::Logger::FLAG_TYPECHECK) \
-      DBG(c, ##__VA_ARGS__);                                      \
+#define LOG_IR(c, ...)                                  \
+  {                                                     \
+    if (Pud::get_logger().flags & Pud::Logger::FLAG_IR) \
+      DBG(c, ##__VA_ARGS__);                            \
   }
-#define LOG_IR(c, ...)                                     \
-  {                                                        \
-    if (Pud::getLogger().flags & Pud::Logger::FLAG_IR) \
-      DBG(c, ##__VA_ARGS__);                               \
-  }
-#define LOG_USER(c, ...)                                     \
-  {                                                          \
-    if (Pud::getLogger().flags & Pud::Logger::FLAG_USER) \
-      DBG(c, ##__VA_ARGS__);                                 \
+#define LOG_USER(c, ...)                                  \
+  {                                                       \
+    if (Pud::get_logger().flags & Pud::Logger::FLAG_USER) \
+      DBG(c, ##__VA_ARGS__);                              \
   }
 
 #define TIME(name) Pud::Timer __timer(name)
 
 #ifndef NDEBUG
-#define seqassertn(expr, msg, ...)                             \
-  ((expr) ? (void)(0)                                          \
-          : Pud::assertionFailure(#expr, __FILE__, __LINE__, \
-                                    fmt::format(msg, ##__VA_ARGS__)))
+#define seqassertn(expr, msg, ...)                            \
+  ((expr) ? (void)(0)                                         \
+          : Pud::assertion_failure(#expr, __FILE__, __LINE__, \
+                                   fmt::format(msg, ##__VA_ARGS__)))
 #define seqassert(expr, msg, ...)          \
   ((expr) ? (void)(0)                      \
-          : Pud::assertionFailure(       \
+          : Pud::assertion_failure(        \
                 #expr, __FILE__, __LINE__, \
-                fmt::format(msg " [{}]", ##__VA_ARGS__, getSrcInfo())))
+                fmt::format(msg " [{}]", ##__VA_ARGS__, get_source_info())))
 #else
 #define seqassertn(expr, msg, ...) ;
 #define seqassert(expr, msg, ...) ;
@@ -62,8 +62,8 @@
 
 namespace Pud {
 
-void assertionFailure(const char *expr_str, const char *file, int line,
-                      const std::string &msg);
+void assertion_failure(const char* expr_str, const char* file, int line,
+                       const std::string& msg);
 
 struct Logger {
   static constexpr int FLAG_TIME = (1 << 0);
@@ -74,20 +74,20 @@ struct Logger {
 
   int flags;
   int level;
-  std::ostream &out;
-  std::ostream &err;
-  std::ostream &log;
+  std::ostream& out;
+  std::ostream& err;
+  std::ostream& log;
 
-  Logger() : flags(0), level(0), out(std::cout), err(std::cerr), log(std::clog) {}
+  Logger()
+      : flags(0), level(0), out(std::cout), err(std::cerr), log(std::clog) {}
 
-  void parse(const std::string &logs);
+  void parse(const std::string& logs);
 };
 
-Logger &getLogger();
-void pushLogger();
-bool popLogger();
+auto get_logger() -> Logger&;
+void push_logger();
+auto pop_logger() -> bool;
 
-}
-
+}  // namespace Pud
 
 #endif  // PUD_COMMON_LOG_H
