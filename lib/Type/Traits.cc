@@ -107,7 +107,7 @@ auto CallableTrait::unify(Type* typ, Unification* undo) -> int {
         star_arg_types.insert(star_arg_types.end(), in_args.begin() + i,
                               in_args.end());
 
-        auto tv = TypecheckVisitor(cache->type_ctx);
+        auto tv = AST::TypecheckVisitor(cache->type_ctx);
         auto t =
             cache->type_ctx->instantiate_tuple(star_arg_types)->get_class();
         if (t->unify(tr_in_args[star].get(), undo) == -1) {
@@ -115,7 +115,7 @@ auto CallableTrait::unify(Type* typ, Unification* undo) -> int {
         }
       }
       if (kw_star < tr_in_args.size()) {
-        auto tv = TypecheckVisitor(cache->type_ctx);
+        auto tv = AST::TypecheckVisitor(cache->type_ctx);
         std::vector<std::string> names;
         std::vector<TypePtr> star_arg_types;
         if (auto tp = tr->get_partial()) {
@@ -138,7 +138,7 @@ auto CallableTrait::unify(Type* typ, Unification* undo) -> int {
       }
 
       if (undo && pf->can_realize()) {
-        auto rf = TypecheckVisitor(cache->type_ctx).realize(pf);
+        auto rf = AST::TypecheckVisitor(cache->type_ctx).realize(pf);
         pf->unify(rf.get(), undo);
       }
       if (args[1]->unify(pf->get_ret_type().get(), undo) == -1) {
