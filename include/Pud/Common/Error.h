@@ -577,6 +577,23 @@ void Err(Error e, const std::shared_ptr<SourceObject>& o, const TA&... args) {
   Err(e, o->get_source_info(), args...);
 }
 
+enum MessageGroupPos {
+  NONE = 0,
+  HEAD,
+  MID,
+  LAST,
+};
+
+void compilation_error(const std::string& msg, const std::string& file = "",
+                       int line = 0, int col = 0, int len = 0,
+                       int error_code = -1, bool terminate = true,
+                       MessageGroupPos pos = NONE);
+
+void compilation_warning(const std::string& msg, const std::string& file = "",
+                         int line = 0, int col = 0, int len = 0,
+                         int error_code = -1, bool terminate = false,
+                         MessageGroupPos pos = NONE);
+
 }  // namespace Pud
 
 #endif  // PUD_COMMON_ERROR_H
