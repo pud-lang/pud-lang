@@ -10,7 +10,7 @@
 
 namespace Pud::AST {
 
-StmtPtr TypecheckVisitor::apply(Cache* cache, const StmtPtr& stmts) {
+auto TypecheckVisitor::apply(Cache* cache, const StmtPtr& stmts) -> StmtPtr {
   if (!cache->type_ctx)
     cache->type_ctx = std::make_shared<TypeContext>(cache);
   TypecheckVisitor v(cache->type_ctx);
@@ -29,39 +29,39 @@ TypecheckVisitor::TypecheckVisitor(
     std::shared_ptr<TypeContext> ctx,
     const std::shared_ptr<std::vector<StmtPtr>>& stmts)
     : ctx(std::move(ctx)) {
-  prependStmts = stmts ? stmts : std::make_shared<std::vector<StmtPtr>>();
+  prepend_stmts = stmts ? stmts : std::make_shared<std::vector<StmtPtr>>();
 }
 
 /**************************************************************************************/
 
 /// Transform an expression node.
-ExprPtr TypecheckVisitor::transform(ExprPtr& expr) {
+auto TypecheckVisitor::transform(ExprPtr& expr) -> ExprPtr {
   if (!expr)
     return nullptr;
 
   auto typ = expr->type;
   if (!expr->done) {
-    bool isIntStatic = expr->staticValue.type == StaticValue::INT;
-    TypecheckVisitor v(ctx, prependStmts);
-    v.setSrcInfo(expr->getSrcInfo());
-    ctx->pushSrcInfo(expr->getSrcInfo());
+    bool is_int_static = expr->static_value.type == StaticValue::INT;
+    TypecheckVisitor v(ctx, prepend_stmts);
+    v.set_source_info(expr->get_source_info());
+    ctx->push_source_info(expr->get_source_info());
     expr->accept(v);
-    ctx->popSrcInfo();
-    if (v.resultExpr) {
-      v.resultExpr->attributes |= expr->attributes;
-      v.resultExpr->origExpr = expr;
-      expr = v.resultExpr;
+    ctx->pop_source_info();
+    if (v.result_expr) {
+      v.result_expr->attributes |= expr->attributes;
+      v.result_expr->orig_expr = expr;
+      expr = v.result_expr;
     }
     seqassert(expr->type, "type not set for {}", expr);
-    if (!(isIntStatic && expr->type->is("bool")))
+    if (!(is_int_static && expr->type->is("bool")))
       unify(typ, expr->type);
     if (expr->done) {
-      ctx->changedNodes++;
+      ctx->changed_nodes++;
     }
   }
   realize(typ);
-  LOG_TYPECHECK("[expr] {}: {}{}", getSrcInfo(), expr,
-                expr->isDone() ? "[done]" : "");
+  LOG_TYPECHECK("[expr] {}: {}{}", get_source_info(), expr,
+                expr->is_done() ? "[done]" : "");
   return expr;
 }
 
@@ -69,59 +69,59 @@ ExprPtr TypecheckVisitor::transform(ExprPtr& expr) {
 /// Special case: replace `None` with `NoneType`
 /// @throw @c ParserException if a node is not a type (use @c transform
 /// instead).
-ExprPtr TypecheckVisitor::transformType(ExprPtr& expr) {
-  if (expr && expr->getNone()) {
-    expr = N<IdExpr>(expr->getSrcInfo(), "NoneType");
-    expr->markType();
+auto TypecheckVisitor::transform_type(ExprPtr& expr) -> ExprPtr {
+  if (expr && expr->get_none()) {
+    expr = N<IdExpr>(expr->get_source_info(), "NoneType");
+    expr->mark_type();
   }
   transform(expr);
   if (expr) {
-    if (!expr->isType() && expr->isStatic()) {
-      expr->setType(Type::makeStatic(ctx->cache, expr));
-    } else if (!expr->isType()) {
-      E(Error::EXPECTED_TYPE, expr, "type");
+    if (!expr->is_type() && expr->is_static()) {
+      expr->set_type(Type::Type::make_static(ctx->cache, expr));
+    } else if (!expr->is_type()) {
+      Err(Error::EXPECTED_TYPE, expr, "type");
     } else {
-      expr->setType(ctx->instantiate(expr->getType()));
+      expr->set_type(ctx->instantiate(expr->get_type()));
     }
   }
   return expr;
 }
 
-void TypecheckVisitor::defaultVisit(Expr* e) {
-  seqassert(false, "unexpected AST node {}", e->toString());
+void TypecheckVisitor::default_visit(Expr* e) {
+  seqassert(false, "unexpected AST node {}", e->to_string());
 }
 
 /// Transform a statement node.
-StmtPtr TypecheckVisitor::transform(StmtPtr& stmt) {
+auto TypecheckVisitor::transform(StmtPtr& stmt) -> StmtPtr {
   if (!stmt || stmt->done)
     return stmt;
 
   TypecheckVisitor v(ctx);
-  v.setSrcInfo(stmt->getSrcInfo());
-  auto oldAge = ctx->age;
-  stmt->age = ctx->age = std::max(stmt->age, oldAge);
-  ctx->pushSrcInfo(stmt->getSrcInfo());
+  v.set_source_info(stmt->get_source_info());
+  auto old_age = ctx->age;
+  stmt->age = ctx->age = std::max(stmt->age, old_age);
+  ctx->push_source_info(stmt->get_source_info());
   stmt->accept(v);
-  ctx->popSrcInfo();
-  ctx->age = oldAge;
-  if (v.resultStmt)
-    stmt = v.resultStmt;
-  if (!v.prependStmts->empty()) {
+  ctx->pop_source_info();
+  ctx->age = old_age;
+  if (v.result_stmt)
+    stmt = v.result_stmt;
+  if (!v.prepend_stmts->empty()) {
     if (stmt)
-      v.prependStmts->push_back(stmt);
+      v.prepend_stmts->push_back(stmt);
     bool done = true;
-    for (auto& s : *(v.prependStmts))
+    for (auto& s : *(v.prepend_stmts))
       done &= s->done;
-    stmt = N<SuiteStmt>(*v.prependStmts);
+    stmt = N<SuiteStmt>(*v.prepend_stmts);
     stmt->done = done;
   }
   if (stmt->done)
-    ctx->changedNodes++;
+    ctx->changed_nodes++;
   return stmt;
 }
 
-void TypecheckVisitor::defaultVisit(Stmt* s) {
-  seqassert(false, "unexpected AST node {}", s->toString());
+void TypecheckVisitor::default_visit(Stmt* s) {
+  seqassert(false, "unexpected AST node {}", s->to_string());
 }
 
 /**************************************************************************************/
@@ -131,12 +131,12 @@ void TypecheckVisitor::visit(StmtExpr* expr) {
   auto done = true;
   for (auto& s : expr->stmts) {
     transform(s);
-    done &= s->isDone();
+    done &= s->is_done();
   }
   transform(expr->expr);
   unify(expr->type, expr->expr->type);
-  if (done && expr->expr->isDone())
-    expr->setDone();
+  if (done && expr->expr->is_done())
+    expr->set_done();
 }
 
 /// Typecheck a list of statements.
@@ -144,71 +144,75 @@ void TypecheckVisitor::visit(SuiteStmt* stmt) {
   std::vector<StmtPtr> stmts;  // for filtering out nullptr statements
   auto done = true;
   for (auto& s : stmt->stmts) {
-    if (ctx->returnEarly) {
-      // If returnEarly is set (e.g., in the function) ignore the rest
+    if (ctx->return_early) {
+      // If return_early is set (e.g., in the function) ignore the rest
       break;
     }
     if (transform(s)) {
       stmts.push_back(s);
-      done &= stmts.back()->isDone();
+      done &= stmts.back()->is_done();
     }
   }
   stmt->stmts = stmts;
   if (done)
-    stmt->setDone();
+    stmt->set_done();
 }
 
 /// Typecheck expression statements.
 void TypecheckVisitor::visit(ExprStmt* stmt) {
   transform(stmt->expr);
-  if (stmt->expr->isDone())
-    stmt->setDone();
+  if (stmt->expr->is_done())
+    stmt->set_done();
 }
 
-void TypecheckVisitor::visit(CommentStmt* stmt) { stmt->setDone(); }
+void TypecheckVisitor::visit(CommentStmt* stmt) { stmt->set_done(); }
 
 /**************************************************************************************/
 
 /// Select the best method indicated of an object that matches the given
-/// argument types. See @c findMatchingMethods for details.
-types::FuncTypePtr TypecheckVisitor::findBestMethod(
-    const ClassTypePtr& typ, const std::string& member,
-    const std::vector<types::TypePtr>& args) {
-  std::vector<CallExpr::Arg> callArgs;
+/// argument types. See @c find_matching_methods for details.
+auto TypecheckVisitor::find_best_method(const Type::ClassTypePtr& typ,
+                                        const std::string& member,
+                                        const std::vector<Type::TypePtr>& args)
+    -> Type::FuncTypePtr {
+  std::vector<CallExpr::Arg> call_args;
   for (auto& a : args) {
-    callArgs.push_back({"", std::make_shared<NoneExpr>()});  // dummy expression
-    callArgs.back().value->setType(a);
+    call_args.push_back(
+        {"", std::make_shared<NoneExpr>()});  // dummy expression
+    call_args.back().value->set_type(a);
   }
-  auto methods = ctx->findMethod(typ.get(), member, false);
-  auto m = findMatchingMethods(typ, methods, callArgs);
+  auto methods = ctx->find_method(typ.get(), member, false);
+  auto m = find_matching_methods(typ, methods, call_args);
   return m.empty() ? nullptr : m[0];
 }
 
 /// Select the best method indicated of an object that matches the given
-/// argument types. See @c findMatchingMethods for details.
-types::FuncTypePtr TypecheckVisitor::findBestMethod(
-    const ClassTypePtr& typ, const std::string& member,
-    const std::vector<ExprPtr>& args) {
-  std::vector<CallExpr::Arg> callArgs;
+/// argument types. See @c find_matching_methods for details.
+auto TypecheckVisitor::find_best_method(const Type::ClassTypePtr& typ,
+                                        const std::string& member,
+                                        const std::vector<ExprPtr>& args)
+    -> Type::FuncTypePtr {
+  std::vector<CallExpr::Arg> call_args;
   for (auto& a : args)
-    callArgs.push_back({"", a});
-  auto methods = ctx->findMethod(typ.get(), member, false);
-  auto m = findMatchingMethods(typ, methods, callArgs);
+    call_args.push_back({"", a});
+  auto methods = ctx->find_method(typ.get(), member, false);
+  auto m = find_matching_methods(typ, methods, call_args);
   return m.empty() ? nullptr : m[0];
 }
 
 /// Select the best method indicated of an object that matches the given
-/// argument types. See @c findMatchingMethods for details.
-types::FuncTypePtr TypecheckVisitor::findBestMethod(
-    const ClassTypePtr& typ, const std::string& member,
-    const std::vector<std::pair<std::string, types::TypePtr>>& args) {
-  std::vector<CallExpr::Arg> callArgs;
+/// argument types. See @c find_matching_methods for details.
+auto TypecheckVisitor::find_best_method(
+    const Type::ClassTypePtr& typ, const std::string& member,
+    const std::vector<std::pair<std::string, Type::TypePtr>>& args)
+    -> Type::FuncTypePtr {
+  std::vector<CallExpr::Arg> call_args;
   for (auto& [n, a] : args) {
-    callArgs.push_back({n, std::make_shared<NoneExpr>()});  // dummy expression
-    callArgs.back().value->setType(a);
+    call_args.push_back({n, std::make_shared<NoneExpr>()});  // dummy expression
+    call_args.back().value->set_type(a);
   }
-  auto methods = ctx->findMethod(typ.get(), member, false);
-  auto m = findMatchingMethods(typ, methods, callArgs);
+  auto methods = ctx->find_method(typ.get(), member, false);
+  auto m = find_matching_methods(typ, methods, call_args);
   return m.empty() ? nullptr : m[0];
 }
 
@@ -219,7 +223,7 @@ class IdSearchVisitor : public CallbackASTVisitor<bool, bool> {
 
  public:
   IdSearchVisitor(std::string what) : what(std::move(what)), result(false) {}
-  bool transform(const std::shared_ptr<Expr>& expr) override {
+  auto transform(const std::shared_ptr<Expr>& expr) -> bool override {
     if (result)
       return result;
     IdSearchVisitor v(what);
@@ -227,7 +231,7 @@ class IdSearchVisitor : public CallbackASTVisitor<bool, bool> {
       expr->accept(v);
     return v.result;
   }
-  bool transform(const std::shared_ptr<Stmt>& stmt) override {
+  auto transform(const std::shared_ptr<Stmt>& stmt) -> bool override {
     if (result)
       return result;
     IdSearchVisitor v(what);
@@ -242,27 +246,27 @@ class IdSearchVisitor : public CallbackASTVisitor<bool, bool> {
 };
 
 /// Check if a function can be called with the given arguments.
-/// See @c reorderNamedArgs for details.
-int TypecheckVisitor::canCall(const types::FuncTypePtr& fn,
-                              const std::vector<CallExpr::Arg>& args) {
-  std::vector<std::pair<types::TypePtr, size_t>> reordered;
-  auto niGenerics = fn->ast->getNonInferrableGenerics();
-  auto score = ctx->reorderNamedArgs(
+/// See @c reorder_named_args for details.
+auto TypecheckVisitor::can_call(const Type::FuncTypePtr& fn,
+                                const std::vector<CallExpr::Arg>& args) -> int {
+  std::vector<std::pair<Type::TypePtr, size_t>> reordered;
+  auto ni_generics = fn->ast->get_non_inferrable_generics();
+  auto score = ctx->reorder_named_args(
       fn.get(), args,
       [&](int s, int k, const std::vector<std::vector<int>>& slots, bool _) {
         for (int si = 0, gi = 0; si < slots.size(); si++) {
           if (fn->ast->args[si].status == Param::Generic) {
             if (slots[si].empty()) {
               // is this "real" type?
-              if (in(niGenerics, fn->ast->args[si].name) &&
-                  !fn->ast->args[si].defaultValue) {
+              if (in(ni_generics, fn->ast->args[si].name) &&
+                  !fn->ast->args[si].default_value) {
                 return -1;
               }
               reordered.push_back({nullptr, 0});
             } else {
-              seqassert(gi < fn->funcGenerics.size(), "bad fn");
-              if (!fn->funcGenerics[gi].type->isStaticType() &&
-                  !args[slots[si][0]].value->isType())
+              seqassert(gi < fn->func_generics.size(), "bad fn");
+              if (!fn->func_generics[gi].type->is_static_type() &&
+                  !args[slots[si][0]].value->is_type())
                 return -1;
               reordered.push_back(
                   {args[slots[si][0]].value->type, slots[si][0]});
@@ -277,23 +281,23 @@ int TypecheckVisitor::canCall(const types::FuncTypePtr& fn,
         }
         return 0;
       },
-      [](error::Error, const SrcInfo&, const std::string&) { return -1; });
+      [](Error, const SourceInfo&, const std::string&) { return -1; });
   for (int ai = 0, mai = 0, gi = 0; score != -1 && ai < reordered.size();
        ai++) {
-    auto expectTyp = fn->ast->args[ai].status == Param::Normal
-                         ? fn->getArgTypes()[mai++]
-                         : fn->funcGenerics[gi++].type;
+    auto expect_typ = fn->ast->args[ai].status == Param::Normal
+                          ? fn->get_arg_types()[mai++]
+                          : fn->func_generics[gi++].type;
     auto [argType, argTypeIdx] = reordered[ai];
     if (!argType)
       continue;
     if (fn->ast->args[ai].status != Param::Normal) {
       // Check if this is a good generic!
-      if (expectTyp && expectTyp->isStaticType()) {
-        if (!args[argTypeIdx].value->isStatic()) {
+      if (expect_typ && expect_typ->is_static_type()) {
+        if (!args[argTypeIdx].value->is_static()) {
           score = -1;
           break;
         } else {
-          argType = Type::makeStatic(ctx->cache, args[argTypeIdx].value);
+          argType = Type::Type::make_static(ctx->cache, args[argTypeIdx].value);
         }
       } else {
         /// TODO: check if these are real types or if traits are satisfied
@@ -303,15 +307,15 @@ int TypecheckVisitor::canCall(const types::FuncTypePtr& fn,
     try {
       ExprPtr dummy = std::make_shared<IdExpr>("");
       dummy->type = argType;
-      dummy->setDone();
-      wrapExpr(dummy, expectTyp, fn);
-      types::Type::Unification undo;
-      if (dummy->type->unify(expectTyp.get(), &undo) >= 0) {
+      dummy->set_done();
+      wrap_expr(dummy, expect_typ, fn);
+      Type::Type::Unification undo;
+      if (dummy->type->unify(expect_typ.get(), &undo) >= 0) {
         undo.undo();
       } else {
         score = -1;
       }
-    } catch (const exc::ParserException&) {
+    } catch (const ParserException&) {
       // Ignore failed wraps
       score = -1;
     }
@@ -320,18 +324,18 @@ int TypecheckVisitor::canCall(const types::FuncTypePtr& fn,
 }
 
 /// Select the best method among the provided methods given the list of
-/// arguments. See @c reorderNamedArgs for details.
-std::vector<types::FuncTypePtr> TypecheckVisitor::findMatchingMethods(
-    const types::ClassTypePtr& typ,
-    const std::vector<types::FuncTypePtr>& methods,
-    const std::vector<CallExpr::Arg>& args) {
+/// arguments. See @c reorder_named_args for details.
+auto TypecheckVisitor::find_matching_methods(
+    const Type::ClassTypePtr& typ,
+    const std::vector<Type::FuncTypePtr>& methods,
+    const std::vector<CallExpr::Arg>& args) -> std::vector<Type::FuncTypePtr> {
   // Pick the last method that accepts the given arguments.
-  std::vector<types::FuncTypePtr> results;
+  std::vector<Type::FuncTypePtr> results;
   for (const auto& mi : methods) {
     if (!mi)
       continue;  // avoid overloads that have not been seen yet
-    auto method = ctx->instantiate(mi, typ)->getFunc();
-    int score = canCall(method, args);
+    auto method = ctx->instantiate(mi, typ)->get_func();
+    int score = can_call(method, args);
     if (score != -1) {
       results.push_back(mi);
     }
@@ -352,22 +356,24 @@ std::vector<types::FuncTypePtr> TypecheckVisitor::findMatchingMethods(
 ///   Union[T...])` expected base class, got derived    -> downcast to base
 ///   class
 /// @param allowUnwrap allow optional unwrapping.
-bool TypecheckVisitor::wrapExpr(ExprPtr& expr, const TypePtr& expectedType,
-                                const FuncTypePtr& callee, bool allowUnwrap) {
-  auto expectedClass = expectedType->getClass();
-  auto exprClass = expr->getType()->getClass();
-  auto doArgWrap = !callee || !callee->ast->hasAttr(
-                                  "std.internal.attributes.no_argument_wrap");
-  if (!doArgWrap)
+auto TypecheckVisitor::wrap_expr(ExprPtr& expr,
+                                 const Type::TypePtr& expected_type,
+                                 const Type::FuncTypePtr& callee,
+                                 bool allow_unwrap) -> bool {
+  auto expected_class = expected_type->get_class();
+  auto expr_class = expr->get_type()->get_class();
+  auto do_arg_wrap = !callee || !callee->ast->has_attr(
+                                    "std.internal.attributes.no_argument_wrap");
+  if (!do_arg_wrap)
     return true;
   auto doTypeWrap =
-      !callee || !callee->ast->hasAttr("std.internal.attributes.no_type_wrap");
-  if (callee && expr->isType()) {
-    auto c = expr->type->getClass();
+      !callee || !callee->ast->has_attr("std.internal.attributes.no_type_wrap");
+  if (callee && expr->is_type()) {
+    auto c = expr->type->get_class();
     if (!c)
       return false;
     if (doTypeWrap) {
-      if (c->getRecord())
+      if (c->get_record())
         expr = transform(
             N<CallExpr>(expr, N<EllipsisExpr>(EllipsisExpr::PARTIAL)));
       else
@@ -380,68 +386,69 @@ bool TypecheckVisitor::wrapExpr(ExprPtr& expr, const TypePtr& expectedType,
 
   std::unordered_set<std::string> hints = {"Generator", "float", TYPE_OPTIONAL,
                                            "pyobj"};
-  if (!exprClass && expectedClass && in(hints, expectedClass->name)) {
+  if (!expr_class && expected_class && in(hints, expected_class->name)) {
     return false;  // argument type not yet known.
-  } else if (expectedClass && expectedClass->name == "Generator" &&
-             exprClass->name != expectedClass->name && !expr->getEllipsis()) {
+  } else if (expected_class && expected_class->name == "Generator" &&
+             expr_class->name != expected_class->name &&
+             !expr->get_ellipsis()) {
     // Note: do not do this in pipelines (TODO: why?)
     expr = transform(N<CallExpr>(N<DotExpr>(expr, "__iter__")));
-  } else if (expectedClass && expectedClass->name == "float" &&
-             exprClass->name == "int") {
+  } else if (expected_class && expected_class->name == "float" &&
+             expr_class->name == "int") {
     expr = transform(N<CallExpr>(N<IdExpr>("float"), expr));
-  } else if (expectedClass && expectedClass->name == TYPE_OPTIONAL &&
-             exprClass->name != expectedClass->name) {
+  } else if (expected_class && expected_class->name == TYPE_OPTIONAL &&
+             expr_class->name != expected_class->name) {
     expr = transform(N<CallExpr>(N<IdExpr>(TYPE_OPTIONAL), expr));
-  } else if (allowUnwrap && expectedClass && exprClass &&
-             exprClass->name == TYPE_OPTIONAL &&
-             exprClass->name != expectedClass->name) {  // unwrap optional
+  } else if (allow_unwrap && expected_class && expr_class &&
+             expr_class->name == TYPE_OPTIONAL &&
+             expr_class->name != expected_class->name) {  // unwrap optional
     expr = transform(N<CallExpr>(N<IdExpr>(FN_UNWRAP), expr));
-  } else if (expectedClass && expectedClass->name == "pyobj" &&
-             exprClass->name != expectedClass->name) {  // wrap to pyobj
+  } else if (expected_class && expected_class->name == "pyobj" &&
+             expr_class->name != expected_class->name) {  // wrap to pyobj
     expr = transform(N<CallExpr>(N<IdExpr>("pyobj"),
                                  N<CallExpr>(N<DotExpr>(expr, "__to_py__"))));
-  } else if (allowUnwrap && expectedClass && exprClass &&
-             exprClass->name == "pyobj" &&
-             exprClass->name != expectedClass->name) {  // unwrap pyobj
-    auto texpr = N<IdExpr>(expectedClass->name);
-    texpr->setType(expectedType);
+  } else if (allow_unwrap && expected_class && expr_class &&
+             expr_class->name == "pyobj" &&
+             expr_class->name != expected_class->name) {  // unwrap pyobj
+    auto texpr = N<IdExpr>(expected_class->name);
+    texpr->set_type(expected_type);
     expr = transform(
         N<CallExpr>(N<DotExpr>(texpr, "__from_py__"), N<DotExpr>(expr, "p")));
-  } else if (callee && exprClass && expr->type->getFunc() &&
-             !(expectedClass && expectedClass->name == "Function")) {
+  } else if (callee && expr_class && expr->type->get_func() &&
+             !(expected_class && expected_class->name == "Function")) {
     // Wrap raw Seq functions into Partial(...) call for easy realization.
-    expr = partializeFunction(expr->type->getFunc());
-  } else if (allowUnwrap && exprClass && expr->type->getUnion() &&
-             expectedClass && !expectedClass->getUnion()) {
+    expr = partialize_function(expr->type->get_func());
+  } else if (allow_unwrap && expr_class && expr->type->get_union() &&
+             expected_class && !expected_class->get_union()) {
     // Extract union types via __internal__.get_union
-    if (auto t = realize(expectedClass)) {
+    if (auto t = realize(expected_class)) {
       expr = transform(N<CallExpr>(N<IdExpr>("__internal__.get_union:0"), expr,
-                                   N<IdExpr>(t->realizedName())));
+                                   N<IdExpr>(t->realized_name())));
     } else {
       return false;
     }
-  } else if (exprClass && expectedClass && expectedClass->getUnion()) {
+  } else if (expr_class && expected_class && expected_class->get_union()) {
     // Make union types via __internal__.new_union
-    if (!expectedClass->getUnion()->isSealed())
-      expectedClass->getUnion()->addType(exprClass);
-    if (auto t = realize(expectedClass)) {
-      if (expectedClass->unify(exprClass.get(), nullptr) == -1)
+    if (!expected_class->get_union()->is_sealed())
+      expected_class->get_union()->add_type(expr_class);
+    if (auto t = realize(expected_class)) {
+      if (expected_class->unify(expr_class.get(), nullptr) == -1)
         expr = transform(N<CallExpr>(N<IdExpr>("__internal__.new_union:0"),
-                                     expr, NT<IdExpr>(t->realizedName())));
+                                     expr, NT<IdExpr>(t->realized_name())));
     } else {
       return false;
     }
-  } else if (exprClass && expectedClass &&
-             exprClass->name != expectedClass->name) {
+  } else if (expr_class && expected_class &&
+             expr_class->name != expected_class->name) {
     // Cast derived classes to base classes
-    auto& mros = ctx->cache->classes[exprClass->name].mro;
+    auto& mros = ctx->cache->classes[expr_class->name].mro;
     for (size_t i = 1; i < mros.size(); i++) {
-      auto t = ctx->instantiate(mros[i]->type, exprClass);
-      if (t->unify(expectedClass.get(), nullptr) >= 0) {
-        if (!expr->isId("")) {
-          expr = castToSuperClass(expr, expectedClass, true);
+      auto t = ctx->instantiate(mros[i]->type, expr_class);
+      if (t->unify(expected_class.get(), nullptr) >= 0) {
+        if (!expr->is_id("")) {
+          expr = cast_to_super_class(expr, expected_class, true);
         } else {  // Just checking can this be done
-          expr->type = expectedClass;
+          expr->type = expected_class;
         }
         break;
       }
@@ -451,45 +458,46 @@ bool TypecheckVisitor::wrapExpr(ExprPtr& expr, const TypePtr& expectedType,
 }
 
 /// Cast derived class to a base class.
-ExprPtr TypecheckVisitor::castToSuperClass(ExprPtr expr, ClassTypePtr superTyp,
-                                           bool isVirtual) {
-  ClassTypePtr typ = expr->type->getClass();
-  for (auto& field : getClassFields(typ.get())) {
-    for (auto& parentField : getClassFields(superTyp.get()))
-      if (field.name == parentField.name) {
+auto TypecheckVisitor::cast_to_super_class(ExprPtr expr,
+                                           Type::ClassTypePtr super_typ,
+                                           bool is_virtual) -> ExprPtr {
+  Type::ClassTypePtr typ = expr->type->get_class();
+  for (auto& field : get_class_fields(typ.get())) {
+    for (auto& parent_field : get_class_fields(super_typ.get()))
+      if (field.name == parent_field.name) {
         unify(ctx->instantiate(field.type, typ),
-              ctx->instantiate(parentField.type, superTyp));
+              ctx->instantiate(parent_field.type, super_typ));
       }
   }
-  realize(superTyp);
-  auto typExpr = N<IdExpr>(superTyp->name);
-  typExpr->setType(superTyp);
+  realize(super_typ);
+  auto typ_expr = N<IdExpr>(super_typ->name);
+  typ_expr->set_type(super_typ);
   return transform(N<CallExpr>(
-      N<DotExpr>(N<IdExpr>("__internal__"), "class_super"), expr, typExpr));
+      N<DotExpr>(N<IdExpr>("__internal__"), "class_super"), expr, typ_expr));
 }
 
 /// Unpack a Tuple or KwTuple expression into (name, type) vector.
 /// Name is empty when handling Tuple; otherwise it matches names of KwTuple.
-std::shared_ptr<std::vector<std::pair<std::string, types::TypePtr>>>
-TypecheckVisitor::unpackTupleTypes(ExprPtr expr) {
+auto TypecheckVisitor::unpack_tuple_types(ExprPtr expr)
+    -> std::shared_ptr<std::vector<std::pair<std::string, Type::TypePtr>>> {
   auto ret =
-      std::make_shared<std::vector<std::pair<std::string, types::TypePtr>>>();
-  if (auto tup = expr->origExpr->getTuple()) {
+      std::make_shared<std::vector<std::pair<std::string, Type::TypePtr>>>();
+  if (auto tup = expr->orig_expr->get_tuple()) {
     for (auto& a : tup->items) {
       transform(a);
-      if (!a->getType()->getClass())
+      if (!a->get_type()->get_class())
         return nullptr;
-      ret->push_back({"", a->getType()});
+      ret->push_back({"", a->get_type()});
     }
-  } else if (auto kw = expr->origExpr->getCall()) {  // origExpr?
-    auto kwCls = in(ctx->cache->classes, expr->getType()->getClass()->name);
-    seqassert(kwCls, "cannot find {}", expr->getType()->getClass()->name);
+  } else if (auto kw = expr->orig_expr->get_call()) {  // orig_expr?
+    auto kw_cls = in(ctx->cache->classes, expr->get_type()->get_class()->name);
+    seqassert(kw_cls, "cannot find {}", expr->get_type()->get_class()->name);
     for (size_t i = 0; i < kw->args.size(); i++) {
       auto& a = kw->args[i].value;
       transform(a);
-      if (!a->getType()->getClass())
+      if (!a->get_type()->get_class())
         return nullptr;
-      ret->push_back({kwCls->fields[i].name, a->getType()});
+      ret->push_back({kw_cls->fields[i].name, a->get_type()});
     }
   } else {
     return nullptr;
@@ -497,12 +505,12 @@ TypecheckVisitor::unpackTupleTypes(ExprPtr expr) {
   return ret;
 }
 
-std::vector<Cache::Class::ClassField>& TypecheckVisitor::getClassFields(
-    types::ClassType* t) {
+auto TypecheckVisitor::get_class_fields(Type::ClassType* t)
+    -> std::vector<Cache::Class::ClassField>& {
   seqassert(t && in(ctx->cache->classes, t->name), "cannot find '{}'",
             t ? t->name : "<null>");
-  if (t->is(TYPE_TUPLE) && !t->getRecord()->args.empty()) {
-    auto key = ctx->generateTuple(t->getRecord()->args.size());
+  if (t->is(TYPE_TUPLE) && !t->get_record()->args.empty()) {
+    auto key = ctx->generate_tuple(t->get_record()->args.size());
     return ctx->cache->classes[key].fields;
   } else {
     return ctx->cache->classes[t->name].fields;
