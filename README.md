@@ -8,7 +8,7 @@
 
 [x] 4. ast simplify
 
-[ ] 5. ast typecheck
+[x] 5. ast typecheck
 
 [x] 6. ast translate
 
