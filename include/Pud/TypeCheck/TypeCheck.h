@@ -161,7 +161,7 @@ class TypecheckVisitor
 
   /* Assignments (assign.cpp) */
   void visit(AST::AssignStmt*) override;
-  void transformUpdate(AST::AssignStmt*);
+  void transform_update(AST::AssignStmt*);
   void visit(AST::AssignMemberStmt*) override;
   auto transform_inplace_update(AST::AssignStmt*)
       -> std::pair<bool, AST::ExprPtr>;
