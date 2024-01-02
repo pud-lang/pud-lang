@@ -10,8 +10,9 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/config.h.in"
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-#set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+# set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+# set(CMAKE_C_COMPILER "/usr/bin/clang")
 set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(project_version "${${PROJECT_NAME}_VERSION}")
@@ -61,7 +62,8 @@ add_definitions(${LLVM_DEFINITIONS})
 # ------------------------------------------------------------
 
 
-include(${CMAKE_SOURCE_DIR}/cmake/deps.cmake)
+#include(${CMAKE_SOURCE_DIR}/cmake/deps.cmake)
+
 
 
 include(GNUInstallDirs)
@@ -85,4 +87,10 @@ set(PUD_COMMON_LIB ${PROJECT_NAME}Common)
 file(GLOB_RECURSE PUD_COMMON_SRCS lib/Common/*.cc)
 add_library(${PUD_COMMON_LIB} SHARED ${PUD_COMMON_SRCS})
 target_link_libraries(${PUD_COMMON_LIB})
-add_dependencies(${PUD_COMMON_LIB} zlibstatic gc backtrace bz2 liblzma re2)
+#add_dependencies(${PUD_COMMON_LIB} zlibstatic gc backtrace bz2 liblzma re2)
+
+# if(PUD_GPU)
+#   add_compile_definitions(PUD_GPU)
+#   find_package(CUDAToolkit REQUIRED)
+#   target_link_libraries(${PUD_COMMON_LIB} PRIVATE CUDA::cudart_static CUDA::cuda_driver)
+# endif()

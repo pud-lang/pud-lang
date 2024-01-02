@@ -122,7 +122,7 @@ void SimplifyVisitor::visit(GeneratorExpr* expr) {
     auto anon = make_anon_fn(stmts);
     if (auto call = anon->get_call()) {
       // seqassert(!call->args.empty() &&
-      // call->args.back().value->getEllipsis(),
+      // call->args.back().value->get_ellipsis(),
       //           "bad lambda: {}", *call);
       call->args.pop_back();
     } else {

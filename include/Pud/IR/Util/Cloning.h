@@ -100,7 +100,7 @@ class CloneVisitor : public ConstVisitor {
     if (!other)
       return nullptr;
 
-    auto id = other->getId();
+    auto id = other->get_id();
     if (ctx.find(id) == ctx.end()) {
       other->accept(*this);
       ctx[id] = result;
@@ -109,7 +109,7 @@ class CloneVisitor : public ConstVisitor {
            ++it) {
         const auto* attr = other->getAttribute(*it);
         if (attr->needsClone()) {
-          ctx[id]->setAttribute(attr->forceClone(*this), *it);
+          ctx[id]->set_attribute(attr->forceClone(*this), *it);
         }
       }
     }
@@ -121,7 +121,7 @@ class CloneVisitor : public ConstVisitor {
   /// @param newVal the clone
   template <typename NodeType>
   void force_remap(const NodeType* original, const NodeType* newVal) {
-    ctx[original->getId()] = const_cast<NodeType*>(newVal);
+    ctx[original->get_id()] = const_cast<NodeType*>(newVal);
   }
 
   auto clone(const PipelineFlow::Stage& other) -> PipelineFlow::Stage {

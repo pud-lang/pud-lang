@@ -564,7 +564,7 @@ auto SimplifyVisitor::codegen_magic(const std::string& op,
   //     fargs.emplace_back(format("T{}", i + 1), I("type"));
   //   }
   //   ret = N<InstantiateExpr>(I(TYPE_TUPLE), ts);
-  //   ret->markType();
+  //   ret->mark_type();
   //   attr.set(Attr::Internal);
   // }
   else if (op == "init") {

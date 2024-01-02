@@ -192,7 +192,7 @@ auto SimplifyVisitor::transform_c_import(const std::string& name,
                 args[ai].type->clone(), nullptr});
     }
   }
-  ctx->generate_canonical_name(name);  // avoid canonicalName == name
+  ctx->generate_canonical_name(name);  // avoid canonical_name == name
   StmtPtr f = N<FunctionStmt>(name, ret ? ret->clone() : N<IdExpr>("NoneType"),
                               fn_args, nullptr, attr);
   f = transform(f);  // Already in the preamble

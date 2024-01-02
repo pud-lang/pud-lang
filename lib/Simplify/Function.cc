@@ -350,7 +350,7 @@ ExprPtr SimplifyVisitor::make_anon_fn(
                                      N<SuiteStmt>(std::move(suite)),
                                      Attr({Attr::Capture})));
   if (auto fs = f->get_suite()) {
-    // seqassert(fs->stmts.size() == 2 && fs->stmts[0]->getFunction(),
+    // seqassert(fs->stmts.size() == 2 && fs->stmts[0]->get_function(),
     //           "invalid function transform");
     prepend_stmts->push_back(fs->stmts[0]);
     for (StmtPtr s = fs->stmts[1]; s;) {
@@ -423,7 +423,7 @@ auto SimplifyVisitor::transform_python_definition(
 auto SimplifyVisitor::transform_llvm_definition(Stmt* code_stmt) -> StmtPtr {
   // seqassert(
   //     code_stmt && code_stmt->get_expr() &&
-  //     code_stmt->getExpr()->expr->getString(), "invalid LLVM definition");
+  //     code_stmt->getExpr()->expr->get_string(), "invalid LLVM definition");
 
   auto code = code_stmt->get_expr()->expr->get_string()->get_value();
   std::vector<StmtPtr> items;
