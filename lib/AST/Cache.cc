@@ -30,6 +30,7 @@ Cache::Cache(std::string argv0)
 
 auto Cache::get_temporary_var(const std::string& prefix, char sigil)
     -> std::string {
+  // 生成临时变量的名字，基于前缀和一个递增的计数器。
   return fmt::format("{}{}_{}", sigil ? fmt::format("{}_", sigil) : "", prefix,
                      ++var_count);
 }
@@ -89,6 +90,7 @@ auto Cache::find_function(const std::string& name) const -> Type::FuncTypePtr {
 auto Cache::find_method(Type::ClassType* typ, const std::string& member,
                         const std::vector<Type::TypePtr>& args)
     -> Type::FuncTypePtr {
+  // 在给定的类类型中查找与给定参数最匹配的方法。
   auto e = std::make_shared<IdExpr>(typ->name);
   e->type = typ->get_class();
   seqassertn(e->type, "not a class");

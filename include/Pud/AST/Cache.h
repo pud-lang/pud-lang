@@ -206,91 +206,93 @@ struct Cache : public std::enable_shared_from_this<Cache> {
                      std::pair<Pud::Type::FuncTypePtr, std::vector<char>>>
       partials;
 
-  // Custom operators
+  // 存储自定义块语句。映射从字符串（可能是操作符或关键字）到一个包含布尔值和函数的对。
+  // 这些函数用于处理这些自定义语句，并可能返回一个抽象语法树（AST）节点。
+  // 布尔值可能用于指示某些特定的处理方式。
   std::unordered_map<
       std::string, std::pair<bool, std::function<StmtPtr(AST::SimplifyVisitor*,
                                                          AST::CustomStmt*)>>>
       custom_block_stmts;
+  // 与 custom_block_stmts 类似，但专门用于自定义表达式语句。
   std::unordered_map<std::string, std::function<StmtPtr(AST::SimplifyVisitor*,
                                                         AST::CustomStmt*)>>
       custom_expr_stmts;
 
-  // Plugin-added import paths
+  // 存储插件添加的导入路径。这允许系统在解析导入语句时扩展其搜索范围到插件指定的目录。
   std::vector<std::string> plugin_import_paths;
 
-  // Set if the Codon is running in JIT mode.
+  // 指示系统是否运行在即时编译（JIT）模式下。
+  // 在 JIT 模式下，代码在运行时编译，而不是事先编译。
   bool is_jit;
+  // 与 JIT 模式相关的一个配置或状态变量。
   int jit_cell;
 
+  // 存储替换映射。
+  // 将一些标识符（如变量名）映射到其替换内容。映射中的布尔值可能用于指示某些特定的处理或状态。
   std::unordered_map<std::string, std::pair<std::string, bool>> replacements;
+  // 追踪生成的元组。用于优化或管理元组类型的实例。
   std::unordered_map<std::string, int> generated_tuples;
+  // 存储解析过程中遇到的错误。
   std::vector<ParserException> errors;
 
-  /// Set if operates in Python compatibility mode (e.g., with Python numerics)
+  // 指示系统是否在 Python 兼容模式下运行。在这种模式下，系统可能使用 Python 的数值类型和行为。
   bool python_compat = false;
-  /// Set if operates in Python extension mode
+  // 指示系统是否在 Python 扩展模式下运行。
+  // 这可能意味着系统支持将某些功能作为 Python 扩展导出或以其他方式与 Python 代码集成。
   bool python_ext = false;
 
  public:
   explicit Cache(std::string argv0 = "");
 
-  // 生成临时变量名
+  // 生成临时变量名，用于在内部生成唯一的变量名，避免命名冲突。
   auto get_temporary_var(const std::string& prefix = "", char sigil = '.')
       -> std::string;
   // 进行标识符的反向查找
   auto rev(const std::string& s) -> std::string;
 
-  /// Generate a unique SourceInfo for internally generated AST nodes.
+  // 生成一个用于内部生成的抽象语法树节点的唯一源代码信息。
   auto generate_source_info() -> SourceInfo;
-  /// Get file contents at the given location.
+  // 根据给定的源代码信息，获取相应位置的文件内容。
   auto get_content(const SourceInfo& info) -> std::string;
-  /// Register a global identifier.
+  // 注册一个全局标识符。
   void add_global(const std::string& name, Pud::IR::Var* var = nullptr);
 
-  /// Realization API.
-
-  /// Find a class with a given canonical name and return a matching Types::Type
-  /// pointer or a nullptr if a class is not found. Returns an _uninstantiated_
-  /// type.
+  // 查找具有给定规范名称的类，并返回一个指向匹配 Types::Type 的指针，如果未找到类，
+  // 则返回 nullptr。返回的类型是未实例化的。
   auto find_class(const std::string& name) const -> Pud::Type::ClassTypePtr;
-  /// Find a function with a given canonical name and return a matching
-  /// Pud::Type::Type pointer or a nullptr if a function is not found. Returns
-  /// an _uninstantiated_ type.
+  // 查找具有给定规范名称的函数，并返回一个匹配 Pud::Type::Type 的指针，如果未找到函数，
+  // 则返回 nullptr。返回的类型是未实例化的。
   auto find_function(const std::string& name) const -> Pud::Type::FuncTypePtr;
-  /// Find the canonical name of a class method.
+  // 查找给定类类型中的类方法的规范名称。
   auto get_method(const Pud::Type::ClassTypePtr& typ, const std::string& member)
       -> std::string {
     if (auto m = in(classes, typ->name)) {
       if (auto t = in(m->methods, member))
         return *t;
     }
-    // assert(false && "cannot find '{}' in '{}'" && member &&
-    // typ->to_string());
+    seqassertn(false, "cannot find '{}' in '{}'", member, typ->to_string());
     return "";
   }
-  /// Find the class method in a given class type that best matches the given
-  /// arguments. Returns an _uninstantiated_ type.
+  // 在给定的类类型中查找最匹配给定参数的类方法。返回的类型是未实例化的。
   auto find_method(Pud::Type::ClassType* typ, const std::string& member,
                    const std::vector<Pud::Type::TypePtr>& args)
       -> Pud::Type::FuncTypePtr;
 
-  /// Given a class type and the matching generic vector, instantiate the type
-  /// and realize it.
+  // 给定一个类类型和匹配的泛型向量，实例化并实现该类型。
   auto realize_type(Pud::Type::ClassTypePtr type,
                     const std::vector<Pud::Type::TypePtr>& generics = {})
       -> Pud::IR::Types::Type*;
-  /// Given a function type and function arguments, instantiate the type and
-  /// realize it. The first argument is the function return type.
-  /// You can also pass function generics if a function has one (e.g. T in def
-  /// foo[T](...)). If a generic is used as an argument, it will be
-  /// auto-deduced. Pass only if a generic cannot be deduced from the provided
-  /// args.
+
+  // 给定一个函数类型和函数参数，实例化并实现该函数类型。
+  // 第一个参数是函数的return类型。
+  // 函数可以是泛型：T in def foo[T](...)
   auto realize_function(Pud::Type::FuncTypePtr type,
                         const std::vector<Pud::Type::TypePtr>& args,
                         const std::vector<Pud::Type::TypePtr>& generics = {},
                         const Pud::Type::ClassTypePtr& parent_class = nullptr)
       -> Pud::IR::Func*;
 
+  // 分别创建一个元组、函数或联合类型，使用给定的类型向量。
   auto make_tuple(const std::vector<Pud::Type::TypePtr>& types)
       -> Pud::IR::Types::Type*;
   auto make_function(const std::vector<Pud::Type::TypePtr>& types)
@@ -298,12 +300,16 @@ struct Cache : public std::enable_shared_from_this<Cache> {
   auto make_union(const std::vector<Pud::Type::TypePtr>& types)
       -> Pud::IR::Types::Type*;
 
+  // 解析给定的代码字符串。
   void parse_code(const std::string& code);
 
+  // 合并多个表达式向量，可能用于多重继承中解决方法解析顺序（MRO）的问题。
   static auto merge_c3(std::vector<std::vector<ExprPtr>>&)
       -> std::vector<ExprPtr>;
 
+  // 指向一个 Python 模块的共享指针，可能用于与 Python 代码的交互或集成。
   std::shared_ptr<Pud::IR::PyModule> py_module = nullptr;
+  // 填充或初始化与 Python 模块相关的内容。
   void populate_python_module();
 };
 

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "Pud/AST/Expr.h"
-#include "Pud/Common/Source.h"
+#include "Pud/Common/Common.h"
 
 namespace Pud::AST {
 
@@ -581,11 +581,11 @@ struct FunctionStmt : public Stmt {
 ///     # 类变量（字段或属性）
 ///     attribute1: int
 ///     attribute2: str
-/// 
+///
 ///     # 类方法
 ///     def method1(self, param1: int) -> str:
 ///         return str(param1)
-/// 
+///
 ///     # 静态方法
 ///     @staticmethod
 ///     def static_method(param2: str) -> int:
@@ -595,13 +595,16 @@ struct FunctionStmt : public Stmt {
 /// -args: 包含 attribute1 和 attribute2 的 Param 对象列表。
 ///  这些是类的字段或属性，每个 Param 对象包含字段名和类型（例如，int 和 str）。
 ///
-/// -suite: 包含类体中定义的方法（例如 method1 和 static_method）的 StmtPtr 类型的语句集合。
+/// -suite: 包含类体中定义的方法（例如 method1 和 static_method）的 StmtPtr
+/// 类型的语句集合。
 ///
 /// -attributes: 可以包含类的额外信息，例如是否是原子类。
 ///
-/// -decorators: 装饰器列表。在这个例子中，包含了一个 ExprPtr 类型的表达式，对应于 @decorator。
+/// -decorators: 装饰器列表。在这个例子中，包含了一个 ExprPtr
+/// 类型的表达式，对应于 @decorator。
 ///
-/// -base_classes: 基类列表。在这个例子中，BaseClass 和 OtherBaseClass 被包含在这个列表中。
+/// -base_classes: 基类列表。在这个例子中，BaseClass 和 OtherBaseClass
+/// 被包含在这个列表中。
 ///
 /// -static_base_classes: 静态基类列表。这通常用于特殊情况，本例中没有展示。
 struct ClassStmt : public Stmt {
@@ -611,7 +614,8 @@ struct ClassStmt : public Stmt {
   std::vector<Param> args;
   // 代表类体的 StmtPtr 类型的语句。通常包含方法定义等。
   StmtPtr suite;
-  // 类的属性，Attr 类型。包含类的额外信息，如是否是原子类、是否应该实现为静态方法等。
+  // 类的属性，Attr
+  // 类型。包含类的额外信息，如是否是原子类、是否应该实现为静态方法等。
   Attr attributes;
   // 装饰器列表，每个装饰器是一个 ExprPtr 类型的表达式。
   std::vector<ExprPtr> decorators;
@@ -753,5 +757,22 @@ struct CommentStmt : public Stmt {
 */
 
 }  // namespace Pud::AST
+
+template <typename T>
+struct fmt::formatter<
+    T, std::enable_if_t<std::is_base_of<Pud::AST::Stmt, T>::value, char>>
+    : fmt::ostream_formatter {};
+
+template <typename T>
+struct fmt::formatter<
+    T,
+    std::enable_if_t<
+        std::is_convertible<T, std::shared_ptr<Pud::AST::Stmt>>::value, char>>
+    : fmt::formatter<std::string_view> {
+  template <typename FormatContext>
+  auto format(const T& p, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}", p ? p->toString() : "<nullptr>");
+  }
+};
 
 #endif  // PUD_AST_STMT_H
