@@ -771,7 +771,7 @@ struct fmt::formatter<
     : fmt::formatter<std::string_view> {
   template <typename FormatContext>
   auto format(const T& p, FormatContext& ctx) const -> decltype(ctx.out()) {
-    return fmt::format_to(ctx.out(), "{}", p ? p->toString() : "<nullptr>");
+    return fmt::format_to(ctx.out(), "{}", p ? p->to_string() : "<nullptr>");
   }
 };
 
