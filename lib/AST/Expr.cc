@@ -36,12 +36,12 @@ auto StaticValue::to_string() const -> std::string {
 }
 
 auto StaticValue::get_int() const -> int64_t {
-  assert(type == StaticValue::INT && "not an int");
+  seqassertn(type == StaticValue::INT, "not an int");
   return std::get<int64_t>(value);
 }
 
 auto StaticValue::get_string() const -> std::string {
-  assert(type == StaticValue::STRING && "not a string");
+  seqassertn(type == StaticValue::STRING, "not a string");
   return std::get<std::string>(value);
 }
 
@@ -81,7 +81,7 @@ auto Expr::get_type_name() -> std::string {
     return get_id()->value;
   } else {
     auto* i = dynamic_cast<InstantiateExpr*>(this);
-    assert(i && i->type_expr->get_id() && "bad MRO");
+    seqassertn(i && i->type_expr->get_id(), "bad MRO");
     return i->type_expr->get_id()->value;
   }
 }
@@ -218,7 +218,7 @@ auto StringExpr::to_string() const -> std::string {
   return wrap_type(fmt::format("string ({})", join(s)));
 }
 auto StringExpr::get_value() const -> std::string {
-  assert(!strings.empty() && "invalid StringExpr");
+  seqassert(!strings.empty(), "invalid StringExpr");
   return strings[0].first;
 }
 auto StringExpr::clone() const -> ExprPtr {
@@ -250,7 +250,7 @@ void StarExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
 KeywordStarExpr::KeywordStarExpr(ExprPtr what) : what(std::move(what)) {}
 KeywordStarExpr::KeywordStarExpr(const KeywordStarExpr& expr)
     : Expr(expr), what(::Pud::clone(expr.what)) {}
-std::string KeywordStarExpr::to_string() const {
+auto KeywordStarExpr::to_string() const -> std::string {
   return wrap_type(fmt::format("kwstar {}", what->to_string()));
 }
 auto KeywordStarExpr::clone() const -> ExprPtr {
@@ -296,7 +296,7 @@ void SetExpr::accept(ASTVisitor& visitor) { visitor.visit(this); }
 DictExpr::DictExpr(std::vector<ExprPtr> items) : items(std::move(items)) {
   for (auto& i : items) {
     auto* t = i->get_tuple();
-    assert(t && t->items.size() == 2 && "dictionary items are invalid");
+    seqassertn(t && t->items.size() == 2, "dictionary items are invalid");
   }
 }
 DictExpr::DictExpr(const DictExpr& expr)

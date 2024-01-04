@@ -5,7 +5,7 @@
 #include <variant>
 
 #include "Pud/AST/Types.h"
-#include "Pud/Common/Source.h"
+#include "Pud/Common/Common.h"
 
 namespace Pud::AST {
 
@@ -717,5 +717,43 @@ enum ExprAttr : uint8_t {
 auto get_static_generic(Expr* e) -> StaticValue::Type;
 
 }  // namespace Pud::AST
+
+template <typename T>
+struct fmt::formatter<
+    T, std::enable_if_t<std::is_base_of<Pud::AST::Expr, T>::value, char>>
+    : fmt::ostream_formatter {};
+
+template <>
+struct fmt::formatter<Pud::AST::CallExpr::Arg>
+    : fmt::formatter<std::string_view> {
+  template <typename FormatContext>
+  auto format(const Pud::AST::CallExpr::Arg& p, FormatContext& ctx) const
+      -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "({}{})",
+                          p.name.empty() ? "" : fmt::format("{} = ", p.name),
+                          p.value);
+  }
+};
+
+template <>
+struct fmt::formatter<Pud::AST::Param> : fmt::formatter<std::string_view> {
+  template <typename FormatContext>
+  auto format(const Pud::AST::Param& p, FormatContext& ctx) const
+      -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}", p.to_string());
+  }
+};
+
+template <typename T>
+struct fmt::formatter<
+    T,
+    std::enable_if_t<
+        std::is_convertible<T, std::shared_ptr<Pud::AST::Expr>>::value, char>>
+    : fmt::formatter<std::string_view> {
+  template <typename FormatContext>
+  auto format(const T& p, FormatContext& ctx) const -> decltype(ctx.out()) {
+    return fmt::format_to(ctx.out(), "{}", p ? p->to_string() : "<nullptr>");
+  }
+};
 
 #endif  // PUD_AST_EXPR_H

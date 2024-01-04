@@ -906,7 +906,7 @@ void YieldFromStmt::accept(ASTVisitor& visitor) { visitor.visit(this); }
 WithStmt::WithStmt(std::vector<ExprPtr> items, std::vector<std::string> vars,
                    StmtPtr suite)
     : items(std::move(items)), vars(std::move(vars)), suite(std::move(suite)) {
-  assert(this->items.size() == this->vars.size() && "vector size mismatch");
+  seqassert(this->items.size() == this->vars.size(), "vector size mismatch");
 }
 WithStmt::WithStmt(std::vector<std::pair<ExprPtr, ExprPtr>> item_var_pairs,
                    StmtPtr suite)
