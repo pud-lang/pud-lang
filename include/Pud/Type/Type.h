@@ -5,14 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Pud/Common/Source.h"
-
-#define TYPE_TUPLE "Tuple"
-#define TYPE_KWTUPLE "KwTuple.N"
-#define TYPE_TYPEVAR "TypeVar"
-#define TYPE_CALLABLE "Callable"
-#define TYPE_PARTIAL "Partial.N"
-#define TYPE_OPTIONAL "Optional"
+#include "Pud/Common/Common.h"
 
 namespace Pud::AST {
 struct Cache;
@@ -134,5 +127,38 @@ struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
 using TypePtr = std::shared_ptr<Type>;
 
 }  // namespace Pud::Type
+
+template <typename T>
+struct fmt::formatter<
+    T, std::enable_if_t<std::is_base_of<Pud::Type::Type, T>::value, char>>
+    : fmt::ostream_formatter {};
+
+template <typename T>
+struct fmt::formatter<
+    T, std::enable_if_t<
+           std::is_convertible<T, std::shared_ptr<Pud::Type::Type>>::value,
+           char>> : fmt::formatter<std::string_view> {
+  char presentation = 'd';
+
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    auto it = ctx.begin(), end = ctx.end();
+    if (it != end && (*it == 'p' || *it == 'd' || *it == 'D'))
+      presentation = *it++;
+    return it;
+  }
+
+  template <typename FormatContext>
+  auto format(const T& p, FormatContext& ctx) const -> decltype(ctx.out()) {
+    if (presentation == 'p')
+      return fmt::format_to(ctx.out(), "{}",
+                            p ? p->debug_string(0) : "<nullptr>");
+    else if (presentation == 'd')
+      return fmt::format_to(ctx.out(), "{}",
+                            p ? p->debug_string(1) : "<nullptr>");
+    else
+      return fmt::format_to(ctx.out(), "{}",
+                            p ? p->debug_string(2) : "<nullptr>");
+  }
+};
 
 #endif  // PUD_TYPE_TYPE_H

@@ -164,7 +164,7 @@ auto UnionType::is_sealed() const -> bool {
 
 void UnionType::seal() {
   // seqassert(!is_sealed(), "union already sealed");
-  auto tv = TypecheckVisitor(cache->type_ctx);
+  auto tv = AST::TypecheckVisitor(cache->type_ctx);
 
   size_t i;
   for (i = 0; i < pending_types.size(); i++)

@@ -46,7 +46,7 @@ class Context : public std::enable_shared_from_this<Context<T>> {
 
   // 向当前作用域添加一个新变量。
   virtual void add(const std::string& name, const Item& var) {
-    assert(!name.empty() && "adding an empty identifier");
+    seqassertn(!name.empty(), "adding an empty identifier");
     map[name].push_front(var);
     stack.front().push_back(name);
   }
@@ -96,7 +96,7 @@ class Context : public std::enable_shared_from_this<Context<T>> {
     if (i == map.end()) {
       return;
     }
-    assert(i->second.size() && "identifier {} not found in the map" && name);
+    seqassertn(i->second.size(), "identifier {} not found in the map", name);
     i->second.pop_front();
     if (!i->second.size()) {
       map.erase(name);
