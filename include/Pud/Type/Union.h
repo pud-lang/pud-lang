@@ -27,7 +27,6 @@ struct UnionType : public RecordType {
   auto generalize(int at_level) -> TypePtr override;
   auto instantiate(int at_level, int* unbound_count,
                    std::unordered_map<int, TypePtr>* cache) -> TypePtr override;
-
  public:
   auto can_realize() const -> bool override;
   auto debug_string(char mode) const -> std::string override;

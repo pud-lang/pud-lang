@@ -24,6 +24,7 @@ struct UnionType;
 
 /// 定义了一个用于类型推断的复杂结构，采用了Hindley-Milner
 /// Algorithm W进行类型推断。
+/// https://github.com/tomprimozic/type-systems
 /// 这种类型系统的设计允许编译器自动推断程序中的类型，减少了对程序员的类型标
 /// 注要求，同时提高了代码的灵活性和表现力。
 struct Type : public SourceObject, public std::enable_shared_from_this<Type> {
