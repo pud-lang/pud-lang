@@ -203,6 +203,8 @@ auto RecordType::unify(Type* typ, Unification* undo) -> int {
       }
     }
 
+    // 如果记录类型具有重复部分，它们被“平坦化”，
+    // 并检查两个记录类型的参数列表是否具有相同的长度。
     if (get_repeats() != -1) {
       flatten();
     }
@@ -215,6 +217,7 @@ auto RecordType::unify(Type* typ, Unification* undo) -> int {
     if (args.size() != tr->args.size()) {
       return -1;
     }
+    // 遍历参数列表，并尝试统一每对元素。任何不匹配都会导致统一失败。
     for (int i = 0; i < args.size(); i++) {
       s = args[i]->unify(tr->args[i].get(), undo);
       if (s != -1) {
@@ -224,7 +227,8 @@ auto RecordType::unify(Type* typ, Unification* undo) -> int {
       }
     }
 
-    // Handle Tuple<->@tuple: when unifying tuples, only record members matter.
+    // Tuple<->@tuple
+    // 处理 Tuple 类型的特殊情况，确保仅记录成员在比较时才重要。
     if (name == TYPE_TUPLE || tr->name == TYPE_TUPLE) {
       if (!args.empty() ||
           (!no_tuple && !tr->no_tuple)) {  // prevent POD<->() unification
@@ -233,6 +237,7 @@ auto RecordType::unify(Type* typ, Unification* undo) -> int {
         return -1;
       }
     }
+    // 如果没有特殊情况，调用基类（ClassType）的统一逻辑。
     return this->ClassType::unify(tr.get(), undo);
   } else if (auto t = typ->get_link()) {
     return t->unify(this, undo);
@@ -242,12 +247,15 @@ auto RecordType::unify(Type* typ, Unification* undo) -> int {
 }
 
 auto RecordType::generalize(int at_level) -> TypePtr {
+  // 首先调用基类的泛化方法。
   auto c = std::static_pointer_cast<ClassType>(
       this->ClassType::generalize(at_level));
   auto a = args;
+  // 遍历记录类型的所有参数，对每个参数应用泛化。
   for (auto& t : a) {
     t = t->generalize(at_level);
   }
+  // 如果记录类型有重复部分，则对其应用泛化。
   auto r = repeats ? repeats->generalize(at_level)->get_static() : nullptr;
   return std::make_shared<RecordType>(c, a, no_tuple, r);
 }
@@ -255,12 +263,15 @@ auto RecordType::generalize(int at_level) -> TypePtr {
 auto RecordType::instantiate(int at_level, int* unbound_count,
                              std::unordered_map<int, TypePtr>* cache)
     -> TypePtr {
+  // 首先调用基类的实例化方法。
   auto c = std::static_pointer_cast<ClassType>(
       this->ClassType::instantiate(at_level, unbound_count, cache));
   auto a = args;
+  // 遍历记录类型的所有参数，对每个参数应用实例化。
   for (auto& t : a) {
     t = t->instantiate(at_level, unbound_count, cache);
   }
+  // 如果记录类型有重复部分，则对其应用实例化。
   auto r =
       repeats
           ? repeats->instantiate(at_level, unbound_count, cache)->get_static()
@@ -268,22 +279,29 @@ auto RecordType::instantiate(int at_level, int* unbound_count,
   return std::make_shared<RecordType>(c, a, no_tuple, r);
 }
 
+// 获取记录类型中未绑定（unbound）的类型变量。
+// 它递归地查找每个参数和重复次数（如果有）中的未绑定类型变量。
 auto RecordType::get_unbounds() const -> std::vector<TypePtr> {
   std::vector<TypePtr> u;
+  // 如果存在重复部分，获取它的未绑定类型变量。
   if (repeats) {
     auto tu = repeats->get_unbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
   }
+  // 对于每个参数，获取其未绑定类型变量。
   for (const auto& a : args) {
     auto tu = a->get_unbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
   }
+  // 将从重复部分和参数获取的未绑定类型变量合并，
+  // 并添加基类（ClassType）的未绑定类型变量。
   auto tu = this->ClassType::get_unbounds();
   u.insert(u.begin(), tu.begin(), tu.end());
   return u;
 }
 
 auto RecordType::can_realize() const -> bool {
+  // 如果它的所有参数都可以实现，重复次数是已知的，且基类也可以实现。
   return get_repeats() >= 0 &&
          std::all_of(args.begin(), args.end(),
                      [](auto& a) { return a->can_realize(); }) &&
@@ -305,6 +323,8 @@ auto RecordType::realized_type_name() const -> std::string {
   return realized_name();
 }
 
+// 检查记录类型是否是异构元组（即元组的类型不完全相同）。
+// 如果是，返回该记录类型；否则返回 nullptr。
 auto RecordType::get_heterogenous_tuple() -> std::shared_ptr<RecordType> {
   assert(can_realize() && "{} not realizable");
   if (args.size() > 1) {
@@ -319,6 +339,8 @@ auto RecordType::get_heterogenous_tuple() -> std::shared_ptr<RecordType> {
 }
 
 auto RecordType::get_repeats() const -> int64_t {
+  // 获取记录类型的重复次数。如果没有明确的重复次数，返回 1。
+  // 如果无法确定重复次数（例如，如果重复部分还没有实例化），则返回 -1。
   if (!repeats) {
     return 1;
   }
@@ -329,6 +351,8 @@ auto RecordType::get_repeats() const -> int64_t {
 }
 
 void RecordType::flatten() {
+  // 将记录类型“展平”。如果记录类型具有重复部分，
+  // 这个方法会将参数列表复制相应的次数，从而使记录类型不再有重复部分。
   auto n = get_repeats();
   assert(n >= 0 && "bad call to flatten");
 
