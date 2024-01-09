@@ -23,10 +23,9 @@ LinkType::LinkType(AST::Cache* cache, Kind kind, int id, int level,
       trait(std::move(trait)),
       generic_name(std::move(generic_name)),
       default_type(std::move(default_type)) {
-  assert(((this->type && this->kind == Kind::Link) ||
-          (!this->type && this->kind == Kind::Generic) ||
-          (!this->type && this->kind == Kind::Unbound)) &&
-         "inconsistent link state");
+  seqassert((this->type && kind == Link) || (!this->type && kind == Generic) ||
+                (!this->type && kind == Unbound),
+            "inconsistent link state");
 }
 
 LinkType::LinkType(TypePtr type)
@@ -38,7 +37,7 @@ LinkType::LinkType(TypePtr type)
       is_static(0),
       trait(nullptr),
       default_type(nullptr) {
-  assert(this->type && "link to nullptr");
+  seqassert(this->type, "link to nullptr");
 }
 
 auto LinkType::unify(Type* typ, Unification* undo) -> int {
@@ -97,8 +96,8 @@ auto LinkType::unify(Type* typ, Unification* undo) -> int {
       return -1;
     }
 
-    assert(!type &&
-           "type has been already unified or is in inconsistent state");
+    seqassert(!type,
+              "type has been already unified or is in inconsistent state");
 
     // 当 undo 不为空时，表示需要记录撤销信息。
     if (undo) {
@@ -137,7 +136,7 @@ auto LinkType::generalize(int at_level) -> TypePtr {
       return shared_from_this();
     }
   } else {
-    assert(type && "link is null");
+    seqassert(type, "link is null");
     return type->generalize(at_level);
   }
 }
@@ -168,7 +167,7 @@ auto LinkType::instantiate(int at_level, int* unbound_count,
     // 保留其未绑定状态允许它在未来被绑定到具体的类型。
     return shared_from_this();
   } else {
-    assert(type && "link is null");
+    seqassert(type, "link is null");
     return type->instantiate(at_level, unbound_count, cache);
   }
 }
@@ -208,7 +207,7 @@ auto LinkType::realized_name() const -> std::string {
   if (kind == Unbound || kind == Generic) {
     return "?";
   }
-  assert(kind == Kind::Link && "unexpected generic link");
+  seqassert(kind == Link, "unexpected generic link");
   return type->realized_name();
 }
 
@@ -250,37 +249,54 @@ auto LinkType::get_unbound() -> std::shared_ptr<LinkType> {
   return nullptr;
 }
 
+// 防止递归类型：检查类型变量是否在另一个类型中出现是防止类型定义成为无限递归的关键。
+// 例如，防止定义 type T = T 这样的类型。
+// 类型变量级别调整：通过调整类型变量的级别，算法可以正确处理泛型的作用域和实例化，
+// 确保类型变量的约束在适当的范围内应用。
+// 支持多种类型：通过处理不同的类型（链接类型、静态类型、类类型等），这个方法确保了
+// 类型系统的灵活性和泛化能力。
 auto LinkType::occurs(Type* typ, Type::Unification* undo) -> bool {
   if (auto tl = typ->get_link()) {
+    // 如果它是未绑定的（Unbound），检查其 ID 是否与当前 LinkType 的 ID 相同。
+    // 如果是，表示发生了递归，返回 true。
     if (tl->kind == Kind::Unbound) {
       if (tl->id == id) {
         return true;
       }
+      // 如果存在与之相关联的特征（trait），递归检查该特征。
       if (tl->trait && occurs(tl->trait.get(), undo)) {
         return true;
       }
+      // 如果提供了撤销（undo）操作，且链接类型的级别高于当前级别，
+      // 则降低链接类型的级别并记录撤销操作。
       if (undo && tl->level > level) {
         undo->leveled.emplace_back(make_pair(tl.get(), tl->level));
         tl->level = level;
       }
       return false;
     } else if (tl->kind == Link) {
+      // 如果链接到另一个类型，递归检查该类型。
       return occurs(tl->type.get(), undo);
     } else {
       return false;
     }
   } else if (auto ts = typ->get_static()) {
-    for (auto &g : ts->generics)
+    // 如果给定的类型 typ 是静态类型（StaticType），遍历其所有泛型，
+    // 并递归检查每个泛型是否包含当前类型变量。
+    for (auto& g : ts->generics)
       if (g.type && occurs(g.type.get(), undo))
         return true;
     return false;
   }
   if (auto tc = typ->get_class()) {
-    for (auto &g : tc->generics)
+    // 遍历其所有泛型，递归检查每个泛型是否包含当前类型变量。
+    for (auto& g : tc->generics)
       if (g.type && occurs(g.type.get(), undo))
         return true;
+    // 如果它是记录类型（RecordType），遍历其所有参数类型，
+    // 递归检查每个参数是否包含当前类型变量。
     if (auto tr = typ->get_record())
-      for (auto &t : tr->args)
+      for (auto& t : tr->args)
         if (occurs(t.get(), undo))
           return true;
     return false;

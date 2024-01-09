@@ -113,7 +113,7 @@ auto UnionType::can_realize() const -> bool {
 }
 
 auto UnionType::realized_name() const -> std::string {
-  // seqassert(can_realize(), "cannot realize {}", to_string());
+  seqassert(can_realize(), "cannot realize {}", to_string());
   std::set<std::string> gss;
   for (auto& a : generics[0].type->get_record()->args)
     gss.insert(a->realized_name());
@@ -129,7 +129,7 @@ auto UnionType::realized_type_name() const -> std::string {
 }
 
 void UnionType::add_type(TypePtr typ) {
-  // seqassert(!is_sealed(), "union already sealed");
+  seqassert(!is_sealed(), "union already sealed");
   if (this == typ.get())
     return;
   if (auto tu = typ->get_union()) {
@@ -163,7 +163,7 @@ auto UnionType::is_sealed() const -> bool {
 }
 
 void UnionType::seal() {
-  // seqassert(!is_sealed(), "union already sealed");
+  seqassert(!is_sealed(), "union already sealed");
   auto tv = AST::TypecheckVisitor(cache->type_ctx);
 
   size_t i;
@@ -179,7 +179,7 @@ void UnionType::seal() {
 }
 
 auto UnionType::get_realization_types() -> std::vector<Pud::Type::TypePtr> {
-  // seqassert(can_realize(), "cannot realize {}", debug_string(1));
+  seqassert(can_realize(), "cannot realize {}", debug_string(1));
   std::map<std::string, Pud::Type::TypePtr> union_types;
   for (auto& u : generics[0].type->get_record()->args)
     union_types[u->realized_name()] = u;

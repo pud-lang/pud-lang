@@ -50,9 +50,9 @@ auto FuncType::unify(Type* typ, Unification* undo) -> int {
       return -1;
     }
     s1 += s;
-    // Check if function generics match.
-    // seqassert(func_generics.size() == t->func_generics.size(),
-    //           "generic size mismatch for {}", ast->name);
+    // 检查func_generics是否匹配
+    seqassert(func_generics.size() == t->func_generics.size(),
+              "generic size mismatch for {}", ast->name);
     // 确保两个 FuncType 实例的泛型参数数量相同。
     // 遍历泛型参数，分别调用 unify 方法来统一这些参数。
     for (int i = 0; i < func_generics.size(); i++) {
@@ -107,15 +107,18 @@ auto FuncType::instantiate(int at_level, int* unbound_count,
 
 auto FuncType::get_unbounds() const -> std::vector<TypePtr> {
   std::vector<TypePtr> u;
+  // 遍历函数泛型，对于每个有类型的泛型，添加其未绑定的类型变量到结果列表。
   for (auto& t : func_generics)
     if (t.type) {
       auto tu = t.type->get_unbounds();
       u.insert(u.begin(), tu.begin(), tu.end());
     }
+  // 如果有父函数类型（func_parent），也添加其未绑定的类型变量。
   if (func_parent) {
     auto tu = func_parent->get_unbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
   }
+  // 遍历所有参数类型，添加其未绑定的类型变量。
   for (auto& a : get_arg_types()) {
     auto tu = a->get_unbounds();
     u.insert(u.begin(), tu.begin(), tu.end());
@@ -123,17 +126,22 @@ auto FuncType::get_unbounds() const -> std::vector<TypePtr> {
   return u;
 }
 
+// 此方法判断函数类型是否可以实现。它确保所有参数类型都可以实现，
+// 并且所有泛型（如果存在）也都可以实现
 auto FuncType::can_realize() const -> bool {
-  // Important: return type does not have to be realized.
+  // skip_self 标志用于跳过自身类型的检查。
   bool skip_self = ast->has_attr(AST::Attr::RealizeWithoutSelf);
 
+  // 遍历所有参数类型，确保每个参数都可以实现。
   auto args = get_arg_types();
   for (int ai = skip_self; ai < args.size(); ai++)
     if (!args[ai]->get_func() && !args[ai]->can_realize())
       return false;
+  // 对于泛型，确保它们都可以实现。
   bool generics =
       std::all_of(func_generics.begin(), func_generics.end(),
                   [](auto& a) { return !a.type || a.type->can_realize(); });
+  // 如果有父函数类型，也检查它是否可以实现。
   if (!skip_self)
     generics &= (!func_parent || func_parent->can_realize());
   return generics;
@@ -145,6 +153,7 @@ auto FuncType::realized_type_name() const -> std::string {
 
 auto FuncType::is_instantiated() const -> bool {
   TypePtr removed = nullptr;
+  // 遍历所有泛型和父函数类型，确保它们都已实例化。
   auto ret_type = get_ret_type();
   if (ret_type->get_func() && ret_type->get_func()->func_parent.get() == this) {
     removed = ret_type->get_func()->func_parent;
@@ -163,12 +172,14 @@ auto FuncType::is_instantiated() const -> bool {
 
 auto FuncType::debug_string(char mode) const -> std::string {
   std::vector<std::string> gs;
+  // 对于每个泛型，生成其调试字符串。
   for (auto& a : func_generics)
     if (!a.name.empty())
       gs.push_back(a.type->debug_string(mode));
   std::string s = join(gs, ",");
   std::vector<std::string> as;
-  // Important: return type does not have to be realized.
+  // 对于每个参数类型，生成其调试字符串。
+  // 根据 mode 参数生成不同级别的调试信息。
   if (mode == 2)
     as.push_back(get_ret_type()->debug_string(mode));
   for (auto& a : get_arg_types())
@@ -179,6 +190,7 @@ auto FuncType::debug_string(char mode) const -> std::string {
   auto fnname = ast->name;
   if (mode == 0) {
     fnname = cache->rev(ast->name);
+    // 如果有父函数类型，包含它的名称。
     // if (func_parent)
     // fnname = fmt::format("{}.{}", func_parent->debug_string(mode), fnname);
   }
@@ -187,17 +199,19 @@ auto FuncType::debug_string(char mode) const -> std::string {
 
 auto FuncType::realized_name() const -> std::string {
   std::vector<std::string> gs;
+  // 对于每个泛型，生成其实现后的名称。
   for (auto& a : func_generics)
     if (!a.name.empty())
       gs.push_back(a.type->realized_name());
   std::string s = join(gs, ",");
   std::vector<std::string> as;
-  // Important: return type does not have to be realized.
+  // 对于每个参数类型，生成其实现后的名称。
   for (auto& a : get_arg_types())
     as.push_back(a->get_func() ? a->get_func()->realized_name()
                                : a->realized_name());
   std::string a = join(as, ",");
   s = s.empty() ? a : join(std::vector<std::string>{a, s}, ",");
+  // 如果有父函数类型，包含其实现后的名称。
   return fmt::format("{}{}{}",
                      func_parent ? func_parent->realized_name() + ":" : "",
                      ast->name, s.empty() ? "" : fmt::format("[{}]", s));

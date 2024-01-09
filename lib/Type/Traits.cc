@@ -101,7 +101,7 @@ auto CallableTrait::unify(Type* typ, Unification* undo) -> int {
         std::vector<TypePtr> star_arg_types;
         if (auto tp = tr->get_partial()) {
           auto ts = tp->args[tp->args.size() - 2]->get_record();
-          // seqassert(ts, "bad partial *args/**kwargs");
+          seqassert(ts, "bad partial *args/**kwargs");
           star_arg_types = ts->args;
         }
         star_arg_types.insert(star_arg_types.end(), in_args.begin() + i,
@@ -120,7 +120,7 @@ auto CallableTrait::unify(Type* typ, Unification* undo) -> int {
         std::vector<TypePtr> star_arg_types;
         if (auto tp = tr->get_partial()) {
           auto ts = tp->args.back()->get_record();
-          // seqassert(ts, "bad partial *args/**kwargs");
+          seqassert(ts, "bad partial *args/**kwargs");
           auto ff = tv.get_class_fields(ts.get());
           for (size_t i = 0; i < ts->args.size(); i++) {
             names.emplace_back(ff[i].name);

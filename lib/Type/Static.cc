@@ -64,7 +64,7 @@ auto StaticType::unify(Type* typ, Unification* undo) -> int {
     }
 
     // 如果当前实例是一个复杂表达式（如 A+1），则比较两个类型的泛型大小。
-    // seqassert(!generics.empty(), "unevaluated simple expression");
+    seqassert(!generics.empty(), "unevaluated simple expression");
     if (generics.size() != t->generics.size()) {
       return -1;
     }
@@ -148,13 +148,13 @@ auto StaticType::debug_string(char mode) const -> std::string {
 }
 
 auto StaticType::realized_name() const -> std::string {
-  // seqassert(can_realize(), "cannot realize {}", to_string());
+  seqassert(can_realize(), "cannot realize {}", to_string());
   std::vector<std::string> deps;
   for (auto& e : generics)
     deps.push_back(e.type->realized_name());
   if (!expr->static_value.evaluated)  // If not already evaluated, evaluate!
     const_cast<StaticType*>(this)->expr->static_value = evaluate();
-  // seqassert(expr->static_value.evaluated, "static value not evaluated");
+  seqassert(expr->static_value.evaluated, "static value not evaluated");
   return expr->static_value.to_string();
 }
 
@@ -164,13 +164,13 @@ auto StaticType::evaluate() const -> AST::StaticValue {
   }
   cache->type_ctx->add_block();
   for (auto& g : generics) {
-    cache->type_ctx->add(TypecheckItem::Type, g.name, g.type);
+    cache->type_ctx->add(AST::TypecheckItem::Type, g.name, g.type);
   }
   auto old_changed_nodes = cache->type_ctx->changed_nodes;
-  auto en = TypecheckVisitor(cache->type_ctx).transform(expr->clone());
+  auto en = AST::TypecheckVisitor(cache->type_ctx).transform(expr->clone());
   cache->type_ctx->changed_nodes = old_changed_nodes;
-  // seqassert(en->is_static() && en->static_value.evaluated,
-  //           "{} cannot be evaluated", en);
+  seqassert(en->is_static() && en->static_value.evaluated,
+            "{} cannot be evaluated", en);
   cache->type_ctx->pop_block();
   return en->static_value;
 }
@@ -181,8 +181,8 @@ void StaticType::parse_expr(const AST::ExprPtr& e,
   if (auto ei = e->get_id()) {
     if (!in(seen, ei->value)) {
       auto val = cache->type_ctx->find(ei->value);
-      // seqassert(val && val->type->is_static_type(), "invalid static
-      // expression");
+      seqassert(val && val->type->is_static_type(),
+                "invalid static expression");
       auto gen_typ = val->type->follow();
       auto id = gen_typ->get_link() ? gen_typ->get_link()->id
                 : gen_typ->get_static()->generics.empty()

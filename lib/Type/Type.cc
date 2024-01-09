@@ -5,15 +5,19 @@
 namespace Pud::Type {
 
 void Type::Unification::undo() {
+  // 撤销链接：对于所有已经链接的类型变量，将其状态
+  // 重置为未绑定（Unbound），并清除关联的类型信息。
   for (size_t i = linked.size(); i-- > 0;) {
     linked[i]->kind = LinkType::Unbound;
     linked[i]->type = nullptr;
   }
+  // 恢复级别：对于所有已经修改级别的类型变量，将其级别重置为原始值。
   for (size_t i = leveled.size(); i-- > 0;) {
     seqassertn(leveled[i].first->kind == LinkType::Unbound, "not unbound [{}]",
                leveled[i].first->get_source_info());
     leveled[i].first->level = leveled[i].second;
   }
+  // 清除特征：对于所有已经关联特征的类型变量，将其特征重置为 nullptr。
   for (auto& t : traits) {
     t->trait = nullptr;
   }
@@ -50,6 +54,7 @@ auto Type::is_static_type() -> char {
   return false;
 }
 
+// 根据类型名和标志创建相应的类型实例。
 auto Type::make_type(AST::Cache* cache, const std::string& name,
                      const std::string& niceName, bool is_record) -> TypePtr {
   if (name == "Union")
@@ -59,6 +64,7 @@ auto Type::make_type(AST::Cache* cache, const std::string& name,
   return std::make_shared<ClassType>(cache, name, niceName);
 }
 
+// 创建一个新的静态类型实例。
 auto Type::make_static(AST::Cache* cache, const AST::ExprPtr& expr)
     -> std::shared_ptr<StaticType> {
   return std::make_shared<StaticType>(cache, expr);
